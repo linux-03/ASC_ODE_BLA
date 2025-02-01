@@ -6,9 +6,9 @@ set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 
 find_package(pybind11)
 
-include_directories(BLA/src)
-include_directories(BLA/HPC/src)
-include_directories(BLA/HPC/concurrentqueue)
+include_directories(bla/src)
+include_directories(bla/HPC/src)
+include_directories(bla/HPC/concurrentqueue)
 
 #include_directories(bla/src)
 #include_directories(bla/HPC/src)
