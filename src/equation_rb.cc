@@ -61,8 +61,8 @@ namespace ASC_ode {
     //std::cout << x << std::endl << std::endl;
     f.setConstant(0);
     
-    f.segment(6, 3) = x.segment(0, 3) - rb_.q_trans() - h_*x.segment(12, 3); // q_trans_n - q_trans - h_*p
-    f.segment(9, 3) = skewSymmetricToVector( ToMatrix(x.segment(3, 9)) - rb_.q() - h_*vectorToSkewSymmetric(x.segment(15, 3)));
+    f.segment(6, 3) = x.segment(0, 3) - rb_.q_trans() - h_*x.segment(24, 3); // q_trans_n - q_trans - h_*p
+    f.segment(9, 3) = skewSymmetricToVector( ToMatrix(x.segment(3, 9)) - rb_.q() - h_*vectorToSkewSymmetric(x.segment(27, 3)));
 
 
     f.segment(18, 6) = x.segment(12, 6) - x.segment(24, 6);
@@ -127,9 +127,9 @@ namespace ASC_ode {
 
       f_diff.segment(3, 3) = skewSymmetricToVector( rb_.q().transpose() * ( Rmean * vectorToSkewSymmetric(x_diff.segment(15, 3)) - rb_.q()* vectorToSkewSymmetric(rb_.p_skew())) );
 
-      f_diff.segment(6, 3) = x_diff.segment(0, 3) - rb_.q_trans() - h_*x_diff.segment(12, 3);
+      f_diff.segment(6, 3) = x_diff.segment(0, 3) - rb_.q_trans() - h_*x_diff.segment(24, 3);
 
-      f_diff.segment(9, 3) = skewSymmetricToVector( ToMatrix(x_diff.segment(3, 9)) - rb_.q() - h_*vectorToSkewSymmetric(x_diff.segment(15, 3)));
+      f_diff.segment(9, 3) = skewSymmetricToVector( ToMatrix(x_diff.segment(3, 9)) - rb_.q() - h_*vectorToSkewSymmetric(x_diff.segment(27, 3)));
 
       f_diff.segment(12, 3) = x_diff.segment(18, 3) - x_diff.segment(12, 3) + (h_/2)*(force_new.segment(0, 3) - vel_con_new.segment(0, 3));
 
@@ -192,9 +192,9 @@ namespace ASC_ode {
 
       f_bm_diff.segment(3, 3) = skewSymmetricToVector( rb_.q().transpose() * ( Rmean * vectorToSkewSymmetric(x_bm_diff.segment(15, 3)) - rb_.q()* vectorToSkewSymmetric(rb_.p_skew())) );
 
-      f_bm_diff.segment(6, 3) = x_bm_diff.segment(0, 3) - rb_.q_trans() - h_*x_bm_diff.segment(12, 3);
+      f_bm_diff.segment(6, 3) = x_bm_diff.segment(0, 3) - rb_.q_trans() - h_*x_bm_diff.segment(24, 3);
 
-      f_bm_diff.segment(9, 3) = skewSymmetricToVector( ToMatrix(x_bm_diff.segment(3, 9)) - rb_.q() - h_*vectorToSkewSymmetric(x_bm_diff.segment(15, 3)));
+      f_bm_diff.segment(9, 3) = skewSymmetricToVector( ToMatrix(x_bm_diff.segment(3, 9)) - rb_.q() - h_*vectorToSkewSymmetric(x_bm_diff.segment(27, 3)));
 
       f_bm_diff.segment(12, 3) = x_bm_diff.segment(18, 3) - x_bm_diff.segment(12, 3) + (h_/2)*(force_new.segment(0, 3) - vel_con_new.segment(0, 3));
 
