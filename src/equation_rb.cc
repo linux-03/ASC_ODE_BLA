@@ -28,7 +28,7 @@ namespace ASC_ode {
       for (size_t i = 0; i < rb_.Beams().size(); i++)
       {
         size_t bm_index = rb_.Beams()[i];
-        //std::cout << rb_.Constraints().col(i);
+        
         res +=  x(dim_per_body()*rbs_.NumBodies() + dim_per_beam()*bm_index) * rb_.Constraints().Col(i);
       }
     } else  {

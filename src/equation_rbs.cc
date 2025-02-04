@@ -93,10 +93,10 @@ void simulate_rbs(RigidBodySystem& rbs, double step_size, size_t steps_)
 
     //std::cout << x << std::endl;
     //std::cout << i << ": " << x(1)*9.81 + x.segment(18, 3).squaredNorm() << std::endl << std::endl; 
-    // Energy : std::cout << x(1)*9.81 + 0.5*x.segment(18, 3).squaredNorm() << std::endl;
+    Energy : std::cout << x(1)*9.81 + 0.5*x.segment(18, 3).squaredNorm() << std::endl;
     // Pot Energy : std::cout << x(1)*9.81 << std::endl;
     // std::cout << 0.5*x.segment(18, 3).squaredNorm() << std::endl;
-    std::cout << x(2) << std::endl;
+    //std::cout << x(2) << std::endl;
   }
 
   // Record the end time
