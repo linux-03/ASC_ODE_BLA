@@ -5,6 +5,7 @@
 #include <iostream>
 #include <matrix.h>
 #include <vector.h>
+#include <assert.h>
 
 using namespace ASC_bla;
 
@@ -57,7 +58,17 @@ auto skewSymmetricToVector(const MatrixExpr<T>& skewMatrix) -> Vector<decltype(s
     return res;
 }
 
+Matrix<double> AxisToMatrix(Vector<double> ax);
+
+void ExpandToFullRotation(VectorView<double> x, VectorView<double> x_exp, size_t num_bodies);
+
+void SetRotGradien(VectorView<double> x, VectorView<AutoDiff<24, double>> x_diff);
+
+Vector<double> MatrixToAxis(const MatrixView<double> R);
+
 size_t dim_per_body();
+
+size_t dim_per_body_rbs();
 
 size_t dim_per_motion();
 

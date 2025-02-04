@@ -8,8 +8,8 @@ namespace ASC_ode {
 
   class RigidBodyEquation: public NonlinearFunction
   {
-      size_t dimX_ = 30;
-      size_t dimF_ = 30;
+      size_t dimX_ = 33;
+      size_t dimF_ = 24;
       RigidBody& rb_;
       RigidBodySystem& rbs_;
       double h_;
@@ -23,6 +23,7 @@ namespace ASC_ode {
       
       template<typename T>
       Vector<T> FuncConstraint(const VectorView<T> x, bool old) const;
+      void SetRotGradien(VectorView<double> x, VectorView<AutoDiff<24, double>> x_diff) const;
       
 
   };

@@ -4,6 +4,10 @@ project(ASC_ODE_BLA)
 set (CMAKE_CXX_STANDARD 17)
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_definitions(-DDEBUG_MODE)  # or any custom name you prefer
+endif()
+
 find_package(pybind11)
 
 include_directories(bla/src)

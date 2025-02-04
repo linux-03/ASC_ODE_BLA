@@ -90,19 +90,19 @@ void RigidBodySystem::ManageConstraints(const VectorView<double> x)
 
 Vector<double> RigidBodySystem::ExpandState()
 {
-  Vector<double> x((this->NumBodies())*dim_per_body() + 2*(this->NumBeams()));
+  Vector<double> x((this->NumBodies())*dim_per_body_rbs() + 2*(this->NumBeams()));
   x.setConstant(0);
   
   for (size_t i = 0; i < this->NumBodies(); i++)
   {
     RigidBody& rb = this->Bodies(i);
-    size_t base = i*dim_per_body();
+    size_t base = i*dim_per_body_rbs();
 
     x.segment(base, 3) = rb.q_trans();
     //std::cout << ToMatrix(x.segment(3, 9));
-    x.segment(base + 3, 9) = ToVector(rb.q());
-    x.segment(base + 18, 3) = rb.p_trans();
-    x.segment(base + 21, 3) = rb.p_skew();
+    x.segment(base + 3, 3) = MatrixToAxis(rb.q());
+    x.segment(base + 6, 3) = rb.p_trans();
+    x.segment(base + 9, 3) = rb.p_skew();
   }
 
   return x;
