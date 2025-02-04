@@ -6,10 +6,11 @@
 using namespace ASC_bla;
 
 RigidBody::RigidBody(): force_(12), q_trans_(3), q_(3, 3), p_trans_(3),
-p_skew_(3), p_half_trans_(3), p_half_skew_(3), v_trans_(3), v_skew_(3)
+p_skew_(3), p_half_trans_(3), p_half_skew_(3), v_trans_(3), v_skew_(3), axis_(3)
 {
   q_trans_.setConstant(0);
   q_.setConstant(0);
+  axis_.setConstant(0);
   p_trans_.setConstant(0);
   p_skew_.setConstant(0);
   p_half_trans_.setConstant(0);
@@ -21,10 +22,11 @@ p_skew_(3), p_half_trans_(3), p_half_skew_(3), v_trans_(3), v_skew_(3)
 }
 
 RigidBody::RigidBody(VectorView<double> q, VectorView<double> p): force_(12), q_trans_(3), q_(3, 3), p_trans_(3),
-p_skew_(3), p_half_trans_(3), p_half_skew_(3), v_trans_(3), v_skew_(3)
+p_skew_(3), p_half_trans_(3), p_half_skew_(3), v_trans_(3), v_skew_(3), axis_(3)
 {
   q_trans_ = q.segment(0, 3);
   q_ = ToMatrix(q.segment(3, 9));
+  axis_ = MatrixToAxis(q_);
   p_trans_ = p.segment(0, 3);
   p_skew_ = p.segment(3, 3);
   p_half_trans_.setConstant(0);
@@ -41,6 +43,11 @@ VectorView<double> RigidBody::q_trans()
 MatrixView<double> RigidBody::q()
 {
   return q_;
+}
+
+VectorView<double> RigidBody::axis()
+{
+  return axis_;
 }
 
 VectorView<double> RigidBody::p_half_trans()

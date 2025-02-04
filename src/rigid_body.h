@@ -15,6 +15,7 @@ class RigidBody {
     size_t body_index_ = -1;
     Vector<double> q_trans_;
     Matrix<double> q_;
+    Vector<double> axis_;
     Vector<double> p_half_trans_; 
     Vector<double> p_half_skew_;   // Rotation matrix
     Vector<double> v_trans_;
@@ -34,6 +35,7 @@ class RigidBody {
 
     VectorView<double> q_trans();
     MatrixView<double> q();
+    VectorView<double> axis();
     VectorView<double> p_half_trans();
     VectorView<double> p_half_skew();
     VectorView<double> v_trans();

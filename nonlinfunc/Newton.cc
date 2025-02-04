@@ -25,7 +25,7 @@ namespace ASC_ode {
         func.EvaluateDeriv(x, fprime);
 
         //std::cout << x << std::endl << std::endl;
-        std::cout << fprime << std::endl;
+        //std::cout << fprime << std::endl;
         Matrix<double> fprime_inv = inverse(fprime);
 
         
@@ -34,10 +34,14 @@ namespace ASC_ode {
 
         //std::cout << fprime_inv << std::endl << std::endl << std::endl;
         //std::cout << x << std::endl;
+        //if (i == 4) {
+        //  throw std::domain_error("Newton did not converge");
+        //}
         //throw std::domain_error("Newton did not converge");
         //std::cout << x << std::endl << std::endl;
-        
+        //std::cout << (res).norm() << " " << tol << std::endl;
         double err = res.norm();
+        //std::cout << "err: " << res << err << std::endl;
         if (callback)
           callback(i, err, x);
         if (err < tol) return;

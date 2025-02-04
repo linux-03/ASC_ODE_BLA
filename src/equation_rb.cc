@@ -50,11 +50,11 @@ namespace ASC_ode {
       x_diff(5).DValue(3) = -1;
       x_diff(7).DValue(3) = 1;
       // Gradient for var b
-      x_diff(2).DValue(3) = 1;
-      x_diff(6).DValue(3) = -1;
+      x_diff(2).DValue(4) = 1;
+      x_diff(6).DValue(4) = -1;
       // Gradient for var c
-      x_diff(1).DValue(3) = -1;
-      x_diff(3).DValue(3) = 1;
+      x_diff(1).DValue(5) = -1;
+      x_diff(3).DValue(5) = 1;
     } else {
       Vector<AutoDiff<24, double>> axis_diff = x;
 
@@ -127,7 +127,7 @@ namespace ASC_ode {
       prev_index = bd_index;
 
       SetRotGradien(x.segment(dim_per_body() * bd_index + 30, 3), x_diff.segment(dim_per_body() * bd_index + 3, 9));
-
+      /*
       std::cout << x_diff(0) << std::endl;
       std::cout << x_diff(1) << std::endl;
       std::cout << x_diff(2) << std::endl;
@@ -137,7 +137,10 @@ namespace ASC_ode {
       std::cout << x_diff(6) << std::endl;
       std::cout << x_diff(7) << std::endl;
       std::cout << x_diff(8) << std::endl;
-
+      std::cout << x_diff(9) << std::endl;
+      std::cout << x_diff(10) << std::endl;
+      std::cout << x_diff(11) << std::endl;
+      */
       Matrix<AutoDiff<24, double>> Rmean = 0.5*(ToMatrix(x_diff.segment(3, 9)) + rb_.q());
       Matrix<AutoDiff<24, double>> Rnew = ToMatrix(x_diff.segment(3,9));
 

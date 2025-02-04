@@ -63,10 +63,10 @@ void RigidBodySystem::SaveState(const VectorView<double> x)
     RigidBody& rb = this->Bodies(i);
     size_t base = i*dim_per_body();
     rb.q_trans() = x.segment(base, 3);
-    //std::cout << ToMatrix(x.segment(3, 9));
-    rb.q() = ToMatrix(x.segment(base + 3, 9));
-    rb.p_trans() = x.segment(base + 18, 3);
-    rb.p_skew() = x.segment(base + 21, 3);
+    rb.axis() = x.segment(base + 3, 3);
+    rb.q() = AxisToMatrix(x.segment(base + 3, 3));
+    rb.p_trans() = x.segment(base + 6, 3);
+    rb.p_skew() = x.segment(base + 9, 3);
   }
   for (size_t i = 0; i < this->NumBeams(); i++)
   {
