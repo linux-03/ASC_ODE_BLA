@@ -33,6 +33,27 @@ p_skew_(3), p_half_trans_(3), p_half_skew_(3), v_trans_(3), v_skew_(3)
   v_skew_.setConstant(0);
 }
 
+RigidBody::RigidBody(const RigidBody& other): force_(12), q_trans_(3), q_(3, 3), p_trans_(3),
+p_skew_(3), p_half_trans_(3), p_half_skew_(3), v_trans_(3), v_skew_(3), axis_(3) {
+  q_trans_ = other.q_trans_;
+  q_ = other.q_;
+  axis_ = other.axis_;
+  p_trans_ = other.p_trans_;
+  p_skew_ = other.p_skew_;
+  p_half_trans_ = other.p_half_trans_;
+  p_half_skew_ = other.p_half_skew_;
+  v_trans_ = other.v_trans_;
+  v_skew_ = other.v_skew_;
+  lambda_ = other.lambda_;
+  mu_ = other.mu_;
+  beams_ = other.beams_;
+  constraints_.reset(new Matrix(12, other.beams_.size()));
+  *(constraints_) = *(other.constraints_);
+  force_ = other.force_;
+  vertices_ = other.vertices_;
+  normals_ = other.normals_;
+}
+
 VectorView<double> RigidBody::q_trans()
 {
   return q_trans_;
@@ -119,5 +140,25 @@ VectorView<double> RigidBody::Force()
 {
   return this->force_;
 }
+
+// Add a vertex
+    void RigidBody::add_vertex(const std::array<double, 3>& v) {
+        vertices_.push_back(v);
+    }
+
+    // Add a normal
+    void RigidBody::add_normal(const std::array<double, 3>& n) {
+        normals_.push_back(n);
+    }
+
+    // Get vertices
+    std::vector<std::array<double, 3>> RigidBody::vertices() {
+        return vertices_;
+    }
+
+    // Get normals
+    std::vector<std::array<double, 3>> RigidBody::normals() {
+        return normals_;
+    }
 
 #endif

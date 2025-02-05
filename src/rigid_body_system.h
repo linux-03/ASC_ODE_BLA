@@ -198,7 +198,11 @@ class RigidBodySystem {
     
     RigidBody& Bodies(size_t i);
     Beam& Beams(size_t i);
+    std::vector<Beam> Beams();
+    std::vector<RigidBody> Bodies();
     Spring& Springs(size_t i);
+
+    Vector<double> connectorPosition(Connector c);
 
     void SaveState(const VectorView<double> x);
     void ManageConstraints(const VectorView<double> x);
