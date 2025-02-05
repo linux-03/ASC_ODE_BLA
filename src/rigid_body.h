@@ -10,8 +10,8 @@
 
 using namespace std;
 
-
 class RigidBody { 
+  private:
     size_t body_index_ = -1;
     Vector<double> q_trans_;
     Matrix<double> q_;
@@ -27,11 +27,13 @@ class RigidBody {
     std::vector<size_t> beams_;
     std::unique_ptr<Matrix<double>> constraints_ = nullptr;
     Vector<double> force_;
+    
 
   public:
     RigidBody();
-    RigidBody(VectorView<double> q, VectorView<double> p);
-    
+    RigidBody(VectorView<double> q, VectorView<double> p);    
+
+    RigidBody(const RigidBody& other);
 
     VectorView<double> q_trans();
     MatrixView<double> q();
@@ -51,6 +53,14 @@ class RigidBody {
     void addBeam(size_t);
     MatrixView<double> Constraints();
     VectorView<double> Force();
+
+    void add_vertex(const std::array<double, 3>& v);
+    void add_normal(const std::array<double, 3>& n);
+    std::vector<std::array<double, 3>> vertices();
+    std::vector<std::array<double, 3>> normals();
+
+    std::vector<std::array<double, 3>> vertices_;
+    std::vector<std::array<double, 3>> normals_;
 };
 
 #endif

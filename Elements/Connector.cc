@@ -15,6 +15,12 @@ Connector::Connector(Vector<double> pos)
   this->body_index_ = 0;
   this->pos_ = pos;
 }
+Connector::Connector(const Connector& other)
+{
+  this->fix_ = other.fix_;
+  this->body_index_ = other.body_index_;
+  this->pos_ = other.pos_;
+}
 size_t& Connector::BodyIndex()
 {
   return this->body_index_;

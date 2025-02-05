@@ -16,6 +16,8 @@ class Beam {
 
   public:
     Beam (Connector connector_a, Connector connector_b);
+    Beam (const Beam& other);
+
     size_t& Index();
     double& Length();
     size_t BodyIndexA();

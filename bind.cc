@@ -13,7 +13,7 @@
 
 namespace py = pybind11;
 
-PYBIND11_MODULE(SR, rbd) {
+PYBIND11_MODULE(rigid_body_FEM, rbd) {
 
     // adds the BLA bindings as submodule, accessible as rigid_body.bla.Matrix etc.
     // https://github.com/pybind/pybind11/discussions/4027
@@ -30,9 +30,11 @@ PYBIND11_MODULE(SR, rbd) {
       .def(py::init<Vector<double>>())
       .def(py::init<Vector<double>, size_t>())
       .def_property("RefPos",[](Connector& c){return py::make_tuple(c.RefPosition(0),c.RefPosition(1),c.RefPosition(2));},
-                             [](Connector&c, std::array<double,3> vals){c.RefPosition() = {vals[0], vals[1], vals[2]};})
-      .def_property("body_index", &Connector::BodyIndex, &Connector::BodyIndex)
-      .def_property("type", &Connector::Fix, &Connector::Fix);
+                             [](Connector&c, std::array<double,3> vals){c.RefPosition()(0) = vals[0]; c.RefPosition()(1) = vals[1]; c.RefPosition()(2) = vals[2];})
+      .def_property("body_index", [](Connector& c){return c.BodyIndex();},
+                                  [](Connector&c, size_t i){ c.BodyIndex() = i;})
+      .def_property("type", [](Connector& c){return c.Fix();},
+                            [](Connector&c, bool t){ c.Fix() = t;});
 
     py::class_<Beam>(rbd,"Beam", py::module_local())
       .def(py::init<>([](Connector a, Connector b){return Beam{a,b};}))
@@ -48,15 +50,65 @@ PYBIND11_MODULE(SR, rbd) {
 
     py::class_<RigidBody> (rbd, "RigidBody_FEM")
       .def(py::init<>())
-      //.def(py::init<Vector<double>, Vector<double>>())
-      .def_property_readonly("index", [](RigidBody& rb){ return rb.Index();});
-    
-    py::class_<RigidBodySystem> (rbd, "RBS_FEM_SR")
+      .def(py::init<Vector<double>, Vector<double>>())
+      .def("asTuple",[](RigidBody& rb){
+        // *column-major* transformation matrix as in https://threejs.org/docs/#api/en/math/Matrix4
+        // converts Schöberl-style ordering of Q to column-major ordering of a three.js transformation matrix:
+        Vector<double> q = rb.Vector_q();
+        return py::make_tuple(q(3), q(6), q(9), 0, q(4), q(7), q(10), 0, q(5), q(8), q(11), 0, q(0), q(1), q(2), 1);
+      })
+      .def_property("q_trans",[](RigidBody& c){ return py::make_tuple(c.q_trans()(0), c.q_trans()(1), c.q_trans()(2));},
+                              [](RigidBody&c, std::array<double,3> vals){c.q_trans() = {vals[0], vals[1], vals[2]};})
+      .def_property("q", [](RigidBody& c){ 
+                            Matrix<double> mat = c.q();
+                            return mat;},
+                         [](RigidBody&c, Matrix<double> mat){c.q() = mat;})
+      .def_property("p_trans", [](RigidBody& c){ return py::make_tuple(c.p_trans()(0), c.p_trans()(1), c.p_trans()(2));},
+                              [](RigidBody&c, std::array<double,3> vals){c.p_trans() = {vals[0], vals[1], vals[2]};})
+      .def_property("p_skew", [](RigidBody& c){ return py::make_tuple(c.p_skew()(0), c.p_skew()(1), c.p_skew()(2));},
+                              [](RigidBody&c, std::array<double,3> vals){c.p_skew() = {vals[0], vals[1], vals[2]};})
+      .def_property_readonly("index", [](RigidBody& rb){ return rb.Index();})
+      .def_property("vertices", [](RigidBody& rb){
+        py::list py_list;
+        for (const auto& v : rb.vertices()) {
+          py_list.append(py::make_tuple(v[0], v[1], v[2]));
+        }
+        return py_list;
+        }, 
+        [](RigidBody& rb, py::list py_list){
+        std::vector<std::array<double, 3>> vec;
+        for (auto item : py_list) {
+          py::tuple tup = py::cast<py::tuple>(item);
+          vec.push_back({py::cast<double>(tup[0]), py::cast<double>(tup[1]), py::cast<double>(tup[2])});
+        }
+        rb.vertices_ = vec;
+        })
+      .def_property("normals", [](RigidBody& rb){
+        py::list py_list;
+        for (const auto& v : rb.normals()) {
+          py_list.append(py::make_tuple(v[0], v[1], v[2]));
+        }
+        return py_list;
+        }, 
+        [](RigidBody& rb, py::list py_list){
+        std::vector<std::array<double, 3>> vec;
+        for (auto item : py_list) {
+          py::tuple tup = py::cast<py::tuple>(item);
+          vec.push_back({py::cast<double>(tup[0]), py::cast<double>(tup[1]), py::cast<double>(tup[2])});
+        }
+        rb.normals_ = vec;
+        });
+      //.def("set_normals_vertives")
+          
+    py::class_<RigidBodySystem> (rbd, "RBS_FEM")
       .def(py::init<>())
       .def("add", py::overload_cast<RigidBody&>(&RigidBodySystem::add))
       .def("add", py::overload_cast<Beam&>(&RigidBodySystem::add))
       .def("add", py::overload_cast<Spring&>(&RigidBodySystem::add))
-      .def("saveState", &RigidBodySystem::SaveState);
+      .def("saveState", &RigidBodySystem::SaveState)
+      .def("beams", py::overload_cast<>(&RigidBodySystem::Beams))
+      .def("bodies", py::overload_cast<>(&RigidBodySystem::Bodies))
+      .def("connectorPos", [](RigidBodySystem& r, Connector c){auto v = r.connectorPosition(c); return py::make_tuple(v(0),v(1),v(2));});
 
     rbd.def("simulate",[](RigidBodySystem& rbs, double tend, double steps) {simulate_rbs(rbs, tend, steps);});
 }

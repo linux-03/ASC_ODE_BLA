@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15...3.27)
 project(ASC_ODE_BLA)
-
+find_package(Python REQUIRED COMPONENTS Interpreter Development)
 set (CMAKE_CXX_STANDARD 17)
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 
@@ -31,9 +31,9 @@ add_executable(main main.cc)
 # Link all necessary libraries to the main executable
 target_link_libraries(main PRIVATE helper Elements nonlinfunc src)
 
-pybind11_add_module(my_module bind.cc)
+pybind11_add_module(rigid_body_FEM bind.cc)
 
-target_link_libraries(my_module PUBLIC Elements nonlinfunc src)
+target_link_libraries(rigid_body_FEM PUBLIC Elements nonlinfunc src)
 
 
 # if invoked using scikit-build-core

@@ -11,6 +11,14 @@ Beam::Beam(Connector connector_a, Connector connector_b)
   this->index_ = -1;
 }
 
+Beam::Beam(const Beam& other)
+{
+  this->connector_a_ = other.connector_a_;
+  this->connector_b_ = other.connector_b_;
+  this->length_ = other.length_;
+  this->index_ = other.index_;
+}
+
 size_t& Beam::Index()
 {
   return this->index_;

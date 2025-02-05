@@ -1,3 +1,10 @@
+find_package(Python REQUIRED COMPONENTS Interpreter Development)
+find_package(pybind11 CONFIG REQUIRED)
+
+list(APPEND CMAKE_PREFIX_PATH "${PYBIND11_DIR}")
+
+
+
 add_library(src STATIC 
     rigid_body.cc 
     rigid_body_system.cc 
@@ -5,7 +12,7 @@ add_library(src STATIC
     equation_rbs.cc
 )
 target_include_directories(src PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(src PRIVATE Elements nonlinfunc helper)
+target_link_libraries(src PRIVATE Elements nonlinfunc helper pybind11::pybind11)
 
 add_executable(main_src main.cc)
 target_link_libraries(main_src src Elements nonlinfunc helper)

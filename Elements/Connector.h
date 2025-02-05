@@ -18,6 +18,8 @@ class Connector {
     Connector(Vector<double> pos);
     Connector(Vector<double> pos, size_t body_index_);
 
+    Connector(const Connector& other);
+
     size_t& BodyIndex();
     bool& Fix();
     

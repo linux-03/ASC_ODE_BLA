@@ -65,8 +65,8 @@ void RigidBodySystem::SaveState(const VectorView<double> x)
     rb.q_trans() = x.segment(base, 3);
     rb.axis() = x.segment(base + 3, 3);
     rb.q() = AxisToMatrix(x.segment(base + 3, 3));
-    rb.p_trans() = x.segment(base + 6, 3);
-    rb.p_skew() = x.segment(base + 9, 3);
+    rb.p_trans() = x.segment(base + 12, 3);
+    rb.p_skew() = x.segment(base + 15, 3);
   }
   for (size_t i = 0; i < this->NumBeams(); i++)
   {
@@ -101,11 +101,44 @@ Vector<double> RigidBodySystem::ExpandState()
     x.segment(base, 3) = rb.q_trans();
     //std::cout << ToMatrix(x.segment(3, 9));
     x.segment(base + 3, 3) = MatrixToAxis(rb.q());
-    x.segment(base + 6, 3) = rb.p_trans();
-    x.segment(base + 9, 3) = rb.p_skew();
+    x.segment(base + 12, 3) = rb.p_trans();
+    x.segment(base + 15, 3) = rb.p_skew();
   }
 
   return x;
+}
+
+std::vector<Beam> RigidBodySystem::Beams() {
+  std::vector<Beam> vec;
+  for (std::reference_wrapper<Beam> bm: beams_)
+  {
+    vec.push_back(bm.get());
+  }
+  return vec;
+}
+
+std::vector<RigidBody> RigidBodySystem::Bodies() {
+  std::vector<RigidBody> vec;
+  for (std::reference_wrapper<RigidBody> rb: bodies_)
+  {
+    vec.push_back(rb.get());
+  }
+  return vec;
+}
+
+
+Vector<double> RigidBodySystem::connectorPosition(Connector c)
+{
+  if (c.Fix())
+  {
+    return c.RefPosition();
+  }
+  Vector<double> pos(3);
+  pos.setConstant(0);
+
+  pos += Bodies(c.BodyIndex()).q_trans() + Bodies(c.BodyIndex()).q()*c.RefPosition();
+
+  return pos;
 }
 
 void RigidBodySystem::add(RigidBody& rb)
