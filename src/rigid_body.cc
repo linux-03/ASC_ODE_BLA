@@ -34,10 +34,9 @@ p_skew_(3), p_half_trans_(3), p_half_skew_(3), v_trans_(3), v_skew_(3)
 }
 
 RigidBody::RigidBody(const RigidBody& other): force_(12), q_trans_(3), q_(3, 3), p_trans_(3),
-p_skew_(3), p_half_trans_(3), p_half_skew_(3), v_trans_(3), v_skew_(3), axis_(3) {
+p_skew_(3), p_half_trans_(3), p_half_skew_(3), v_trans_(3), v_skew_(3) {
   q_trans_ = other.q_trans_;
   q_ = other.q_;
-  axis_ = other.axis_;
   p_trans_ = other.p_trans_;
   p_skew_ = other.p_skew_;
   p_half_trans_ = other.p_half_trans_;
