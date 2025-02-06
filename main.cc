@@ -18,14 +18,23 @@ int main()  {
   rbs.add(rb);
 
   Connector connect_a({0, 0, 0});
-  Connector connect_b({0, -0.5, -0.5}, rb.Index());
+  Connector connect_b({0, 0, 0.5}, rb.Index());
 
-  Beam bm(connect_a, connect_b);
+  Beam bm(connect_b, connect_a);
 
   rbs.add(bm);
+  std::cout << bm.Length();
+  //for (size_t i = 0; i < steps; i++) {
 
-  simulate_rbs(rbs, 0.15/4, steps);
-
+  simulate_rbs(rbs, 0.15/10, 100, [](int i, double t, VectorView<double> q) {
+                    std::cout<<std::fixed << "Body1 newton-iteration: " << i << " newton-error: " << std::scientific << t << std::fixed << std::endl
+                      <<"\t"<< "Translation =" << q(0) << " ," << q(1) << ", "<<", " << q(2) << "} " << std::endl
+                      <<"\t"<< " Rotation: " << q(3) << " ," << q(4) << ", "<<", " << q(5) << "} " << std::endl
+                      <<"\t"<< "           " << q(6) << " ," << q(7) << ", "<<", " << q(8) << "} " << std::endl
+                      <<"\t"<< "           " << q(9) << " ," << q(10) << ", "<<", " << q(11) << "} " << std::endl << std::endl;
+                      }
+                  );
+  //}
 
   return 0;
 }

@@ -32,6 +32,6 @@ class RigidBodySystemEquation: public NonlinearFunction
     size_t BodyDimensions() const;
 };
 
-void simulate_rbs(RigidBodySystem& rbs, double step_size, size_t steps_);
+void simulate_rbs(RigidBodySystem& rbs, double step_size, size_t steps_, std::function<void(int,double,VectorView<double>)> callback = nullptr);
 
 #endif

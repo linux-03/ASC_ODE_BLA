@@ -45,7 +45,7 @@ void RigidBodySystemEquation::Evaluate (VectorView<double> x, VectorView<double>
 
 void RigidBodySystemEquation::EvaluateDeriv (VectorView<double> x, MatrixView<double> df) const
 {
-
+ 
   df.setConstant(0);
   Matrix<double> df_block = df.Block(0, 0,  rbs_.get().NumBodies()*dim_per_body(), dimX_);
   func_.EvaluateDeriv(x, df_block);
@@ -76,10 +76,12 @@ void RigidBodySystemEquation::EvaluateDeriv (VectorView<double> x, MatrixView<do
       df.Row(this->BodyDimensions() + 2*j + 1).segment(dim_per_body()*bd_index, dim_per_body()) = f_diff(2*j + 1); 
     }
   }
+  
   //dNumeric(*(this), x, df);
 }
 
-void simulate_rbs(RigidBodySystem& rbs, double step_size, size_t steps_)
+void simulate_rbs(RigidBodySystem& rbs, double step_size, size_t steps_, std::function<void(int,double,VectorView<double>)> callback)
+
 {
   RigidBodySystemEquation eqrb(rbs, step_size);
 
@@ -87,9 +89,11 @@ void simulate_rbs(RigidBodySystem& rbs, double step_size, size_t steps_)
 
   auto start = std::chrono::high_resolution_clock::now();
   for (size_t i = 0; i < steps_; i++) {
-    NewtonSolver(eqrb, x);
+    NewtonSolver(eqrb, x, 1e-10, 50, callback);
 
     rbs.SaveState(x);
+    x(30)=0;
+    x(31)=0;
 
     //std::cout << x << std::endl;
     //std::cout << i << ": " << x(1)*9.81 + x.segment(18, 3).squaredNorm() << std::endl << std::endl; 
@@ -97,8 +101,8 @@ void simulate_rbs(RigidBodySystem& rbs, double step_size, size_t steps_)
     // Pot Energy : std::cout << x(1)*9.81 << std::endl;
     // std::cout << 0.5*x.segment(18, 3).squaredNorm() << std::endl;
     //std::cout << x(2) << std::endl;
+  
   }
-
   // Record the end time
     auto end = std::chrono::high_resolution_clock::now();
 

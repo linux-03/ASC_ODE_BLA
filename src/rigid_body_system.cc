@@ -44,10 +44,43 @@ RigidBody& RigidBodySystem::Bodies(size_t i)
   return this->bodies_[i].get();
 }
 
+std::vector<RigidBody> RigidBodySystem::Bodies() {
+  std::vector<RigidBody> vec;
+  for (std::reference_wrapper<RigidBody> rb: bodies_)
+  {
+    vec.push_back(rb.get());
+  }
+  return vec;
+}
+
+Vector<double> RigidBodySystem::connectorPosition(Connector c)
+{
+  if (c.Fix())
+  {
+    return c.RefPosition();
+  }
+
+  Vector<double> pos(3);
+  pos.setConstant(0);
+
+  pos += Bodies(c.BodyIndex()).q_trans() + Bodies(c.BodyIndex()).q()*c.RefPosition();
+
+  return pos;
+}
+
 Beam& RigidBodySystem::Beams(size_t i)
 {
   assert( i < this->beams_.size());
   return this->beams_[i].get();
+}
+
+std::vector<Beam> RigidBodySystem::Beams() {
+  std::vector<Beam> vec;
+  for (std::reference_wrapper<Beam> bm: beams_)
+  {
+    vec.push_back(bm.get());
+  }
+  return vec;
 }
 
 Spring& RigidBodySystem::Springs(size_t i)
