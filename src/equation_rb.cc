@@ -94,11 +94,11 @@ namespace ASC_ode {
 
 
     f.segment(0, 3) = x.segment(12, 3) - rb_.p_trans() + (h_/2)*(force_old.segment(0, 3) - vel_con_old.segment(0, 3));
-    f.segment(3, 3) = skewSymmetricToVector( rb_.q().transpose() * ( Rmean * vectorToSkewSymmetric(x.segment(15, 3)) - rb_.q()* vectorToSkewSymmetric(rb_.p_skew())) );
+    f.segment(3, 3) = skewSymmetricToVector( rb_.q().transpose() * ( Rmean * vectorToSkewSymmetric(x.segment(15, 3)) - rb_.q()* vectorToSkewSymmetric(rb_.p_skew()) + (h_/2)*(ToMatrix(force_old.segment(3, 9)) - ToMatrix(vel_con_old.segment(3, 9)))));
 
 
     f.segment(12, 3) = x.segment(18, 3) - x.segment(12, 3) + (h_/2)*(force_new.segment(0, 3) - vel_con_new.segment(0, 3)); // v - p + h/2 * f - f_v' 
-    f.segment(15, 3) = skewSymmetricToVector(Rnew.transpose()*(Rnew*vectorToSkewSymmetric(x.segment(21, 3)) - Rmean*vectorToSkewSymmetric(x.segment(15, 3))));
+    f.segment(15, 3) = skewSymmetricToVector(Rnew.transpose()*(Rnew*vectorToSkewSymmetric(x.segment(21, 3)) - Rmean*vectorToSkewSymmetric(x.segment(15, 3)) + (h_/2)*(ToMatrix(force_new.segment(3, 9)) - ToMatrix(vel_con_new.segment(3, 9)))));
   }
 
   void RigidBodyEquation::EvaluateDeriv(VectorView<double> x, MatrixView<double> df)  const {
@@ -156,7 +156,7 @@ namespace ASC_ode {
       
       f_diff.segment(0, 3) = x_diff.segment(12, 3) - rb_.p_trans() + (h_/2)*(force_old.segment(0, 3) - vel_con_old.segment(0, 3));
 
-      f_diff.segment(3, 3) = skewSymmetricToVector( rb_.q().transpose() * ( Rmean * vectorToSkewSymmetric(x_diff.segment(15, 3)) - rb_.q()* vectorToSkewSymmetric(rb_.p_skew())) );
+      f_diff.segment(3, 3) = skewSymmetricToVector( rb_.q().transpose() * ( Rmean * vectorToSkewSymmetric(x_diff.segment(15, 3)) - rb_.q()* vectorToSkewSymmetric(rb_.p_skew()) + (h_/2)*(ToMatrix(force_old.segment(3, 9)) - ToMatrix(vel_con_old.segment(3, 9)))));
 
       f_diff.segment(6, 3) = x_diff.segment(0, 3) - rb_.q_trans() - h_*x_diff.segment(24, 3);
 
@@ -164,7 +164,7 @@ namespace ASC_ode {
 
       f_diff.segment(12, 3) = x_diff.segment(18, 3) - x_diff.segment(12, 3) + (h_/2)*(force_new.segment(0, 3) - vel_con_new.segment(0, 3));
 
-      f_diff.segment(15, 3) = skewSymmetricToVector(Rnew.transpose()*(Rnew*vectorToSkewSymmetric(x_diff.segment(21, 3)) - Rmean*vectorToSkewSymmetric(x_diff.segment(15, 3))));
+      f_diff.segment(15, 3) = skewSymmetricToVector(Rnew.transpose()*(Rnew*vectorToSkewSymmetric(x_diff.segment(21, 3)) - Rmean*vectorToSkewSymmetric(x_diff.segment(15, 3)) + (h_/2)*(ToMatrix(force_new.segment(3, 9)) - ToMatrix(vel_con_new.segment(3, 9)))));
 
       f_diff.segment(18, 6) = x_diff.segment(12, 6) - x_diff.segment(24, 6);
 
@@ -202,15 +202,15 @@ namespace ASC_ode {
       
       f_bm_diff.segment(0, 3) = x_bm_diff.segment(12, 3) - rb_.p_trans() + (h_/2)*(force_old.segment(0, 3) - vel_con_old.segment(0, 3));
 
-      f_bm_diff.segment(3, 3) = skewSymmetricToVector( rb_.q().transpose() * ( Rmean * vectorToSkewSymmetric(x_bm_diff.segment(15, 3)) - rb_.q()* vectorToSkewSymmetric(rb_.p_skew())) );
-
+      f_bm_diff.segment(3, 3) = skewSymmetricToVector( rb_.q().transpose() * ( Rmean * vectorToSkewSymmetric(x_bm_diff.segment(15, 3)) - rb_.q()* vectorToSkewSymmetric(rb_.p_skew()) + (h_/2)*(ToMatrix(force_old.segment(3, 9)) - ToMatrix(vel_con_old.segment(3, 9)))));
+      
       f_bm_diff.segment(6, 3) = x_bm_diff.segment(0, 3) - rb_.q_trans() - h_*x_bm_diff.segment(24, 3);
 
       f_bm_diff.segment(9, 3) = skewSymmetricToVector( ToMatrix(x_bm_diff.segment(3, 9)) - rb_.q() - h_*vectorToSkewSymmetric(x_bm_diff.segment(27, 3)));
 
       f_bm_diff.segment(12, 3) = x_bm_diff.segment(18, 3) - x_bm_diff.segment(12, 3) + (h_/2)*(force_new.segment(0, 3) - vel_con_new.segment(0, 3));
 
-      f_bm_diff.segment(15, 3) = skewSymmetricToVector(Rnew.transpose()*(Rnew*vectorToSkewSymmetric(x_bm_diff.segment(21, 3)) - Rmean*vectorToSkewSymmetric(x_bm_diff.segment(15, 3))));
+      f_bm_diff.segment(15, 3) = skewSymmetricToVector(Rnew.transpose()*(Rnew*vectorToSkewSymmetric(x_bm_diff.segment(21, 3)) - Rmean*vectorToSkewSymmetric(x_bm_diff.segment(15, 3)) + (h_/2)*(ToMatrix(force_new.segment(3, 9)) - ToMatrix(vel_con_new.segment(3, 9)))));
 
       f_bm_diff.segment(18, 6) = x_bm_diff.segment(12, 6) - x_bm_diff.segment(24, 6);
     }

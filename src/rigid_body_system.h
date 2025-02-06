@@ -58,7 +58,7 @@ class RigidBodySystem {
         Beam bm = Beams(bm_index);
         size_t index_a = bm.BodyIndexA();
         size_t index_b = bm.BodyIndexB();
-        G.Col(bm_index).segment(0, 12) += G_single_body_beam( bm, body_index, x.segment(index_a*dim_per_body(), 12), x.segment(index_b*dim_per_body(), 12));
+        G.Col(bm_index).segment(0, 12) += G_single_body_beam_n( bm, body_index, x.segment(index_a*dim_per_body(), 12), x.segment(index_b*dim_per_body(), 12));
       }
 
       return G;
@@ -157,6 +157,46 @@ class RigidBodySystem {
       return res;
     }
 
+    /**
+    * @brief Computes the derivative of a beam length constrain with respect to a specific body.
+    *
+    * @param bm The Beam of which you want to have the derivative of the constraint
+    * @param bd_index The index of the body to derive after
+    * @param q_a The 12-dimesnional vector representing the body position of body A of the beam
+    * @param q_b The 12-dimesnional vector representing the body position of body B of
+    * @return 12-dimesional gradient
+    */
+    template<typename T>
+    Vector<T> G_single_body_beam_n(Beam& bm, size_t bd_index, VectorView<T> q_a, VectorView<T> q_b) {
+    
+      Vector<T> res(dim_per_motion());
+
+      Vec<3, T> pos1 = bm.ConnectorA().RefPosition();
+      Vec<3, T> pos2 = bm.ConnectorB().RefPosition();
+
+      Vector<AutoDiff<12, T>> q_a_diff = q_a;
+      Vector<AutoDiff<12, T>> q_b_diff = q_b;
+
+      if ((bd_index == bm.BodyIndexA()) && !(bm.ConnectorA().Fix())) {
+        for(size_t i =0 ; i < 12; i++){
+          q_a_diff(i).DValue(i) = 1;
+        }
+      } else {
+        for(size_t i=0; i < 12; i++){
+          q_b_diff(i).DValue(i) = 1;
+        }
+      }
+      
+      Vector<AutoDiff<12, T>> q = bm.PositionA(q_a_diff) - bm.PositionB(q_b_diff);
+      
+      AutoDiff<12, T> g = q*q - bm.Length()*bm.Length(); // Length of beam constraint
+      Vector<T> g_vec(12);
+      for(size_t i =0 ; i < 12; i++){
+        g_vec(i) = g.DValue(i);    
+      }
+      return g_vec;
+    }
+
 
     /**
     * @brief Computes the VelocityConstraint for a specific beam
@@ -179,8 +219,8 @@ class RigidBodySystem {
     size_t bd_index_a = bm.BodyIndexA();
     size_t bd_index_b = bm.BodyIndexB();
 
-    G_a += G_single_body_beam(bm, bd_index_a, x.segment(bd_index_a*dim_per_body(), 12), x.segment(bd_index_b*dim_per_body(), 12));
-    G_b += G_single_body_beam(bm, bd_index_b, x.segment(bd_index_a*dim_per_body(), 12), x.segment(bd_index_b*dim_per_body(), 12));
+    G_a += G_single_body_beam_n(bm, bd_index_a, x.segment(bd_index_a*dim_per_body(), 12), x.segment(bd_index_b*dim_per_body(), 12));
+    G_b += G_single_body_beam_n(bm, bd_index_b, x.segment(bd_index_a*dim_per_body(), 12), x.segment(bd_index_b*dim_per_body(), 12));
     
 
     T c_a = G_a.segment(0, 3)*x.segment(bd_index_a * dim_per_body() + 18, 3) + 
