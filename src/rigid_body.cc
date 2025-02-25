@@ -125,7 +125,7 @@ void RigidBody::addBeam(size_t i)
   if (std::find(this->beams_.begin(), this->beams_.end(), i) == this->beams_.end())
   {
     this->beams_.push_back(i);
-    this->constraints_.reset(new Matrix(12, beams_.size()));
+    this->constraints_.reset(new Matrix(12, beams_.size()*dim_per_beam()/2));
     this->constraints_->setConstant(0);
   }
 }

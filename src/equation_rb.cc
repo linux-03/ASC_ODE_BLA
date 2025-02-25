@@ -29,7 +29,7 @@ namespace ASC_ode {
       {
         size_t bm_index = rb_.Beams()[i];
         
-        res +=  x(dim_per_body()*rbs_.NumBodies() + dim_per_beam()*bm_index) * rb_.Constraints().Col(i);
+        res += rb_.Constraints().Block(0, i*dim_per_beam()/2, 12, dim_per_beam()/2) * x.segment(dim_per_body()*rbs_.NumBodies() + dim_per_beam()*bm_index, dim_per_beam()/2);
       }
     } else {
       Matrix<T> constr = rbs_.JacobianConstraint(x, rb_.Index());
@@ -37,7 +37,7 @@ namespace ASC_ode {
       for (size_t i = 0; i < rb_.Beams().size(); i++)
       {
         size_t bm_index = rb_.Beams()[i];
-        res += x(dim_per_body()*rbs_.NumBodies() + dim_per_beam()*bm_index + 1) * constr.Col(i);
+        res += constr.Block(0, i*dim_per_beam()/2, 12, dim_per_beam()/2) * x.segment(dim_per_body()*rbs_.NumBodies() + dim_per_beam()*bm_index + dim_per_beam()/2, dim_per_beam()/2);
       }
     }
 

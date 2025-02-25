@@ -38,8 +38,8 @@ void RigidBodySystemEquation::Evaluate (VectorView<double> x, VectorView<double>
 
   for (size_t i = 0; i < rbs_.get().NumBeams(); i++ )
   {
-    f(this->BodyDimensions() + i*2) = this->rbs_.get().Constraint(x, i);
-    f(this->BodyDimensions() + i*2 + 1) = this->rbs_.get().Velocity_Constraint(x, i);
+    f.segment(this->BodyDimensions() + i*dim_per_beam(), dim_per_beam()/2) = this->rbs_.get().Constraint(x, i);
+    f.segment(this->BodyDimensions() + i*dim_per_beam() + dim_per_beam()/2, dim_per_beam()/2) = this->rbs_.get().Velocity_Constraint(x, i);
     //std::cout << "f1: " << this->rbs_.get().Constraint(x, i) << std::endl;
     //std::cout << "f2: " << this->rbs_.get().Velocity_Constraint(x, i) << std::endl;
   }
@@ -69,13 +69,16 @@ void RigidBodySystemEquation::EvaluateDeriv (VectorView<double> x, MatrixView<do
 
     for (size_t i = 0; i < rbs_.get().NumBeams(); i++ )
     {
-      f_diff(i*2) = this->rbs_.get().Constraint(x_diff, i);
-      f_diff(i*2 + 1) = this->rbs_.get().Velocity_Constraint(x_diff, i);
+      f_diff.segment(this->BodyDimensions() + i*dim_per_beam(), dim_per_beam()/2) = this->rbs_.get().Constraint(x, i);
+      f_diff.segment(this->BodyDimensions() + i*dim_per_beam() + dim_per_beam()/2, dim_per_beam()/2) = this->rbs_.get().Velocity_Constraint(x, i);
+      //std::cout << "f1: " << this->rbs_.get().Constraint(x, i) << std::endl;
+      //std::cout << "f2: " << this->rbs_.get().Velocity_Constraint(x, i) << std::endl;
     }
-
+    
     for (size_t j = 0; j < rbs_.get().NumBeams(); j++) {
-      df.Row(this->BodyDimensions() + 2*j).segment(dim_per_body()*bd_index, dim_per_body()) = f_diff(2*j); 
-      df.Row(this->BodyDimensions() + 2*j + 1).segment(dim_per_body()*bd_index, dim_per_body()) = f_diff(2*j + 1); 
+      for (size_t i = 0; i < dim_per_beam(); i ++) {
+        df.Row(this->BodyDimensions() + 2*j).segment(dim_per_body()*bd_index, dim_per_body()) = f_diff(dim_per_beam()*j + i);
+      }
     }
   }
   

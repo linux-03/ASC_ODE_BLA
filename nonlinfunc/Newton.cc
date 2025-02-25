@@ -26,7 +26,7 @@ namespace ASC_ode {
         func.EvaluateDeriv(x, fprime);
 
         //std::cout << "x: " << x << std::endl << std::endl;
-        //std::cout << std::fixed << fprime << std::endl;
+        std::cout << std::fixed << fprime << std::endl;
         Matrix<double> fprime_inv = inverse(fprime);
         
         x -= fprime_inv*res;

@@ -51,4 +51,12 @@ double& Beam::Mu()
 {
   return this->mu_;
 }
+VectorView<double> Beam::RelPosAToB()
+{
+  return AtoB;
+}
+VectorView<double> Beam::RelPosBToA()
+{
+  return BtoA;
+}
 #endif

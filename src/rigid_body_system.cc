@@ -151,10 +151,19 @@ void RigidBodySystem::add(Beam& bm)
   this->beams_.push_back(std::ref(bm));
   bm.Index() = this->num_beams_;
   this->num_beams_++;
+
+  Vector<double> abs_pos_b = bm.ConnectorA().Position(this->Bodies(bm.BodyIndexA()).Vector_q());
+  Vector<double> abs_pos_a = bm.ConnectorB().Position(this->Bodies(bm.BodyIndexB()).Vector_q());
+
+  bm.RelPosAToB() = abs_pos_a - this->Bodies(bm.BodyIndexB()).q_trans();
+  bm.RelPosBToA() = abs_pos_b - this->Bodies(bm.BodyIndexA()).q_trans();
+
   this->Bodies(bm.BodyIndexA()).addBeam(bm.Index());
   this->Bodies(bm.BodyIndexB()).addBeam(bm.Index());
+
   double res = Norm(bm.PositionA(this->Bodies(bm.BodyIndexA()).Vector_q()) - bm.PositionB(this->Bodies(bm.BodyIndexB()).Vector_q()));
   bm.Length() = res;
+
 }
 
 void RigidBodySystem::add(Spring& spr)

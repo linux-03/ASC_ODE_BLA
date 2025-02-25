@@ -13,6 +13,8 @@ class Beam {
     double mu_;
     Connector connector_a_;
     Connector connector_b_;
+    Vector<double> AtoB = {0, 0, 0};
+    Vector<double> BtoA = {0, 0, 0};
 
   public:
     Beam (Connector connector_a, Connector connector_b);
@@ -26,6 +28,10 @@ class Beam {
     double& Mu();
     Connector& ConnectorA();
     Connector& ConnectorB();
+
+    VectorView<double> RelPosAToB();
+    VectorView<double> RelPosBToA();
+
     template<typename T>
     Vector<T> PositionA(const VectorView<T> q) {
       return this->connector_a_.Position(q);

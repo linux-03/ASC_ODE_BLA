@@ -18,8 +18,8 @@ int main()  {
 
   rbs.add(rb);
 
-  Connector connect_a({0, 0, 0});
-  Connector connect_b({0, -0.5, 0}, rb.Index());
+  Connector connect_b({0, 0, 0});
+  Connector connect_a({0, -0.5, 0}, rb.Index());
 
   Beam bm(connect_a, connect_b);
 
