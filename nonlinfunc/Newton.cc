@@ -15,24 +15,24 @@ namespace ASC_ode {
 
 
     size_t count = 0;
-    std::cout << "x in = " << x << std::endl;
+    //std::cout << std::fixed << "x in = " << x << std::endl;
     for (int i = 0; i < maxsteps; i++)
       {
         
         func.Evaluate(x, res);
-        //std::cout << "f: " << res << std::endl << std::endl;
+        ////std::cout << std::fixed << "f: " << res << std::endl << std::endl;
         //std::cout<< "eval" << std::endl;
         
         func.EvaluateDeriv(x, fprime);
 
         //std::cout << "x: " << x << std::endl << std::endl;
-        //std::cout << fprime << std::endl;
+        //std::cout << std::fixed << fprime << std::endl;
         Matrix<double> fprime_inv = inverse(fprime);
         
         x -= fprime_inv*res;
 
         //td::cout << fprime_inv << std::endl << std::endl << std::endl;
-        //std::cout << "x: " << x << std::endl;
+        //std::cout << std::fixed <<  "x: " << x << std::endl;
         //throw std::domain_error("Newton did not converge");
         //std::cout << x << std::endl << std::endl;
         
@@ -41,7 +41,7 @@ namespace ASC_ode {
           callback_(i, err, x);
         if (err < tol) return;
       }
-    std::cout << "x: " << x << std::endl;
+    //std::cout << "x: " << x << std::endl;
     throw std::domain_error("Newton did not converge");
   }
 }

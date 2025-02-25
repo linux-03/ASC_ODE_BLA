@@ -59,6 +59,7 @@ class RigidBodySystem {
         size_t index_a = bm.BodyIndexA();
         size_t index_b = bm.BodyIndexB();
         G.Col(bm_index).segment(0, 12) += G_single_body_beam_n( bm, body_index, x.segment(index_a*dim_per_body(), 12), x.segment(index_b*dim_per_body(), 12));
+        //std::cout << G << std::endl;
       }
 
       return G;
@@ -77,7 +78,14 @@ class RigidBodySystem {
       Beam& bm = this->beams_[beam_index];
       size_t bd_index_a = bm.BodyIndexA();
       size_t bd_index_b = bm.BodyIndexB();
+      Vec<3, T> pos1 = bm.ConnectorA().RefPosition();
+      Vec<3, T> pos2 = bm.ConnectorB().RefPosition();
       Vector<T> q = bm.PositionA( x.segment(bd_index_a*dim_per_body(), 12) ) - bm.PositionB( x.segment(bd_index_b*dim_per_body(), 12) );
+      //Vector<T> q_n = x.segment(bd_index_a*dim_per_body(), 3) + ToMatrix(x.segment(bd_index_a*dim_per_body() + 3, 9))*pos1 - x.segment(bd_index_b*dim_per_body(), 3) - ToMatrix(x.segment(bd_index_b*dim_per_body() + 3, 9))*pos2;
+      //std::cout << "q_n: " << q_n << std::endl;
+      //std::cout << "q: " << q << std::endl;
+      //std::cout << "pos1: " << pos1 << std::endl;
+      //std::cout << "pos2: " << pos2 << std::endl;
       T g; // One constraint for a simple pendulum
       g = q.squaredNorm() - bm.Length()*bm.Length(); // Length of beam constraint
       return g;
@@ -187,13 +195,13 @@ class RigidBodySystem {
           q_b_diff(i).DValue(i) = 1;
         }
       }
-      
+      //Vector<AutoDiff<12, T>> q = q_a_diff.segment(0, 3) + ToMatrix(q_a_diff.segment(3, 9))*pos1 - q_b_diff.segment(0, 3) - ToMatrix(q_b_diff.segment(3, 9))*pos2;
       Vector<AutoDiff<12, T>> q = bm.PositionA(q_a_diff) - bm.PositionB(q_b_diff);
       
       AutoDiff<12, T> g = q*q - bm.Length()*bm.Length(); // Length of beam constraint
       Vector<T> g_vec(12);
-      for(size_t i =0 ; i < 12; i++){
-        g_vec(i) = g.DValue(i);    
+      for(size_t i = 0 ; i < 12; i++){
+        g_vec(i) = g.DValue(i);
       }
       return g_vec;
     }
@@ -223,12 +231,15 @@ class RigidBodySystem {
     G_a += G_single_body_beam_n(bm, bd_index_a, x.segment(bd_index_a*dim_per_body(), 12), x.segment(bd_index_b*dim_per_body(), 12));
     G_b += G_single_body_beam_n(bm, bd_index_b, x.segment(bd_index_a*dim_per_body(), 12), x.segment(bd_index_b*dim_per_body(), 12));
     
+    Matrix<T> R_a = ToMatrix(x.segment(bd_index_a * dim_per_body() + 3, 9)) * vectorToSkewSymmetric( x.segment(bd_index_a * dim_per_body() + 18 + 3, 3) ) ;
+    Matrix<T> R_b = ToMatrix(x.segment(bd_index_b * dim_per_body() + 3, 9)) * vectorToSkewSymmetric( x.segment(bd_index_b * dim_per_body() + 18 + 3, 3) ) ;
+     
 
     T c_a = G_a.segment(0, 3)*x.segment(bd_index_a * dim_per_body() + 18, 3) + 
-                  G_a.segment(3, 9)*ToVector(vectorToSkewSymmetric( x.segment(bd_index_a * dim_per_body() + 18 + 3, 3) ) );
+                  G_a.segment(3, 9) * ToVector(R_a);
 
     T c_b = G_b.segment(0, 3)*x.segment(bd_index_b * dim_per_body() + 18, 3) + 
-                  G_b.segment(3, 9)*ToVector(vectorToSkewSymmetric( x.segment(bd_index_b * dim_per_body() + 18 + 3, 3) ) );
+                  G_b.segment(3, 9)*ToVector(R_b);
 
     return c_a + c_b;
   }

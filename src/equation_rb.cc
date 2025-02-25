@@ -31,8 +31,9 @@ namespace ASC_ode {
         
         res +=  x(dim_per_body()*rbs_.NumBodies() + dim_per_beam()*bm_index) * rb_.Constraints().Col(i);
       }
-    } else  {
+    } else {
       Matrix<T> constr = rbs_.JacobianConstraint(x, rb_.Index());
+      //std::cout << "constr: " << constr << std::endl;
       for (size_t i = 0; i < rb_.Beams().size(); i++)
       {
         size_t bm_index = rb_.Beams()[i];
@@ -66,25 +67,30 @@ namespace ASC_ode {
     f.setConstant(0);
     
     f.segment(6, 3) = x.segment(0, 3) - rb_.q_trans() - h_*x.segment(24, 3); // q_trans_n - q_trans - h_*p
-    f.segment(9, 3) = skewSymmetricToVector( ToMatrix(x.segment(3, 9)) - rb_.q() - h_*vectorToSkewSymmetric(x.segment(27, 3)));
+    f.segment(9, 3) = skewSymmetricToVector( Rmean.transpose() * (ToMatrix(x.segment(3, 9)) - rb_.q()) - h_*vectorToSkewSymmetric(x.segment(27, 3)));
 
 
-    f.segment(18, 6) = x.segment(12, 6) - x.segment(24, 6);
+    f.segment(0, 6) = x.segment(12, 6) - x.segment(24, 6);
 
     //std::cout << "x_segm: " << x.segment(12,3) <<std::endl;
     //std::cout << "p_trans: " << rb_.p_trans() << std::endl;
-    f.segment(0, 3) = x.segment(12, 3) - rb_.p_trans() + (h_/2)*(force_old.segment(0, 3) - vel_con_old.segment(0, 3));
-    f.segment(3, 3) = skewSymmetricToVector( rb_.q().transpose() * ( Rmean * vectorToSkewSymmetric(x.segment(15, 3)) - rb_.q()* vectorToSkewSymmetric(rb_.p_skew()) + (h_/2)*(ToMatrix(force_old.segment(3, 9)) - ToMatrix(vel_con_old.segment(3, 9)))));
+    //std::cout << x.segment(12, 3) << std::endl;
+    //std::cout << rb_.p_trans() << std::endl;
+    //std::cout << force_old.segment(3, 9) << std::endl;
+    //std::cout << vel_con_old.segment(3, 9) << std::endl;
+    f.segment(12, 3) = x.segment(12, 3) - rb_.p_trans() - (h_/2)*(force_old.segment(0, 3) + vel_con_old.segment(0, 3));
+    //std::cout << "r: " << rb_.q().transpose() * (Rmean * vectorToSkewSymmetric(x.segment(15, 3)) - rb_.q()* vectorToSkewSymmetric(rb_.p_skew()) - (h_/2)*(ToMatrix(force_old.segment(3, 9)) + ToMatrix(vel_con_old.segment(3, 9)))) << std::endl;
+    f.segment(15, 3) = skewSymmetricToVector( rb_.q().transpose() * ( Rmean * vectorToSkewSymmetric(x.segment(15, 3)) - rb_.q()* vectorToSkewSymmetric(rb_.p_skew()) - (h_/2)*(ToMatrix(force_old.segment(3, 9)) + ToMatrix(vel_con_old.segment(3, 9)))));
 
 
-    f.segment(12, 3) = x.segment(18, 3) - x.segment(12, 3) + (h_/2)*(force_new.segment(0, 3) - vel_con_new.segment(0, 3)); // v - p + h/2 * f - f_v' 
-    f.segment(15, 3) = skewSymmetricToVector( Rnew.transpose() * (Rnew*vectorToSkewSymmetric(x.segment(21, 3)) - Rmean*vectorToSkewSymmetric(x.segment(15, 3)) + (h_/2)*(ToMatrix(force_new.segment(3, 9)) - ToMatrix(vel_con_new.segment(3, 9)))));
+    f.segment(18, 3) = x.segment(18, 3) - x.segment(12, 3) - (h_/2)*(force_new.segment(0, 3) + vel_con_new.segment(0, 3)); // v - p + h/2 * (f - f_v)' 
+    f.segment(21, 3) = skewSymmetricToVector( Rnew.transpose() * (Rnew*vectorToSkewSymmetric(x.segment(21, 3)) - Rmean * vectorToSkewSymmetric(x.segment(15, 3)) - (h_/2)*(ToMatrix(force_new.segment(3, 9)) + ToMatrix(vel_con_new.segment(3, 9)))));
 
     Matrix<double> eye(3, 3);
     eye.setConstant(0);
     eye(0, 0) = 1;
     eye(1, 1) = 1;
-    eye(2, 2) = 1; 
+    eye(2, 2) = 1;
     Matrix<double> c = ToMatrix(x.segment(3, 9)).transpose()*ToMatrix(x.segment(3,9)) - eye;
 
     f(24) = c(0, 0);
@@ -101,6 +107,17 @@ namespace ASC_ode {
   }
 
   void RigidBodyEquation::EvaluateDeriv(VectorView<double> x, MatrixView<double> df)  const {
+
+    Vector<double> force_old = rb_.Force();
+    Vector<double> vel_con_old = FuncConstraint(x, true);
+
+    Vector<double> force_new = rbs_.PotentialGradient(x, rb_.Index());
+    Vector<double> vel_con_new = FuncConstraint(x, false);
+
+    //std::cout << "force_old: " <<  force_old << std::endl;
+    //std::cout << "vel_con_old: " <<  vel_con_old << std::endl;
+    //std::cout << "force_new: " <<  force_new << std::endl;
+    //std::cout << "vel_con_new: " <<  vel_con_new << std::endl;
   
     //dNumeric((*this), x, df);
     
@@ -131,21 +148,21 @@ namespace ASC_ode {
       //std::cout << x << std::endl << std::endl;
       
       
-      f_diff.segment(0, 3) = x_diff.segment(12, 3) - rb_.p_trans() + (h_/2)*(force_old.segment(0, 3) - vel_con_old.segment(0, 3));
+      f_diff.segment(12, 3) = x_diff.segment(12, 3) - rb_.p_trans() + (h_/2)*(force_old.segment(0, 3) - vel_con_old.segment(0, 3));
 
-      f_diff.segment(3, 3) = skewSymmetricToVector( rb_.q().transpose() * ( Rmean * vectorToSkewSymmetric(x_diff.segment(15, 3)) - rb_.q()* vectorToSkewSymmetric(rb_.p_skew()) +
+      f_diff.segment(15, 3) = skewSymmetricToVector( rb_.q().transpose() * ( Rmean * vectorToSkewSymmetric(x_diff.segment(15, 3)) - rb_.q()* vectorToSkewSymmetric(rb_.p_skew()) +
                                                                                     (h_/2)*(ToMatrix(force_old.segment(3, 9)) - ToMatrix(vel_con_old.segment(3, 9)))));
 
       f_diff.segment(6, 3) = x_diff.segment(0, 3) - rb_.q_trans() - h_*x_diff.segment(24, 3);
 
       f_diff.segment(9, 3) = skewSymmetricToVector( ToMatrix(x_diff.segment(3, 9)) - rb_.q() - h_*vectorToSkewSymmetric(x_diff.segment(27, 3)));
 
-      f_diff.segment(12, 3) = x_diff.segment(18, 3) - x_diff.segment(12, 3) + (h_/2)*(force_new.segment(0, 3) - vel_con_new.segment(0, 3));
+      f_diff.segment(18, 3) = x_diff.segment(18, 3) - x_diff.segment(12, 3) + (h_/2)*(force_new.segment(0, 3) - vel_con_new.segment(0, 3));
 
-      f_diff.segment(15, 3) = skewSymmetricToVector(Rnew.transpose()*(Rnew*vectorToSkewSymmetric(x_diff.segment(21, 3)) - Rmean*vectorToSkewSymmetric(x_diff.segment(15, 3)) + 
+      f_diff.segment(21, 3) = skewSymmetricToVector(Rnew.transpose()*(Rnew*vectorToSkewSymmetric(x_diff.segment(21, 3)) - Rmean*vectorToSkewSymmetric(x_diff.segment(15, 3)) + 
                                                                   (h_/2)*(ToMatrix(force_new.segment(3, 9)) - ToMatrix(vel_con_new.segment(3, 9)))));
 
-      f_diff.segment(18, 6) = x_diff.segment(12, 6) - x_diff.segment(24, 6);
+      f_diff.segment(0, 6) = x_diff.segment(12, 6) - x_diff.segment(24, 6);
 
       Matrix<AutoDiff<30, double>> eye(3, 3);
       eye.setConstant(0);
@@ -198,21 +215,21 @@ namespace ASC_ode {
       //std::cout << x << std::endl << std::endl;
       
       
-      f_bm_diff.segment(0, 3) = x_bm_diff.segment(12, 3) - rb_.p_trans() + (h_/2)*(force_old.segment(0, 3) - vel_con_old.segment(0, 3));
+      f_bm_diff.segment(12, 3) = x_bm_diff.segment(12, 3) - rb_.p_trans() + (h_/2)*(force_old.segment(0, 3) - vel_con_old.segment(0, 3));
 
-      f_bm_diff.segment(3, 3) = skewSymmetricToVector( rb_.q().transpose() * ( Rmean * vectorToSkewSymmetric(x_bm_diff.segment(15, 3)) - rb_.q()* vectorToSkewSymmetric(rb_.p_skew()) +
+      f_bm_diff.segment(15, 3) = skewSymmetricToVector( rb_.q().transpose() * ( Rmean * vectorToSkewSymmetric(x_bm_diff.segment(15, 3)) - rb_.q()* vectorToSkewSymmetric(rb_.p_skew()) +
                                                                                        (h_/2)*(ToMatrix(force_old.segment(3, 9)) - ToMatrix(vel_con_old.segment(3, 9)))));
 
       f_bm_diff.segment(6, 3) = x_bm_diff.segment(0, 3) - rb_.q_trans() - h_*x_bm_diff.segment(24, 3);
 
       f_bm_diff.segment(9, 3) = skewSymmetricToVector( ToMatrix(x_bm_diff.segment(3, 9)) - rb_.q() - h_*vectorToSkewSymmetric(x_bm_diff.segment(27, 3)));
 
-      f_bm_diff.segment(12, 3) = x_bm_diff.segment(18, 3) - x_bm_diff.segment(12, 3) + (h_/2)*(force_new.segment(0, 3) - vel_con_new.segment(0, 3));
+      f_bm_diff.segment(18, 3) = x_bm_diff.segment(18, 3) - x_bm_diff.segment(12, 3) + (h_/2)*(force_new.segment(0, 3) - vel_con_new.segment(0, 3));
 
-      f_bm_diff.segment(15, 3) = skewSymmetricToVector(Rnew.transpose()*(Rnew*vectorToSkewSymmetric(x_bm_diff.segment(21, 3)) - Rmean*vectorToSkewSymmetric(x_bm_diff.segment(15, 3)) + 
+      f_bm_diff.segment(21, 3) = skewSymmetricToVector(Rnew.transpose()*(Rnew*vectorToSkewSymmetric(x_bm_diff.segment(21, 3)) - Rmean*vectorToSkewSymmetric(x_bm_diff.segment(15, 3)) + 
                                                                   (h_/2)*(ToMatrix(force_new.segment(3, 9)) - ToMatrix(vel_con_new.segment(3, 9)))));
 
-      f_bm_diff.segment(18, 6) = x_bm_diff.segment(12, 6) - x_bm_diff.segment(24, 6);
+      f_bm_diff.segment(0, 6) = x_bm_diff.segment(12, 6) - x_bm_diff.segment(24, 6);
     }
 
     for (size_t j = 0; j < 30; j++) {

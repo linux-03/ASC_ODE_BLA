@@ -51,9 +51,13 @@ Matrix<T> vectorToSkewSymmetric(const VectorView<T> v) {
 // Function to convert a skew-symmetric matrix to a 3D vector (inverse hat, vee operator)
 template<typename T>
 auto skewSymmetricToVector(const MatrixExpr<T>& skewMatrix) -> Vector<decltype(skewMatrix(0, 0)*1.0)> {
-    // Check if the matrix is skew-symmetric
+    Vector<decltype(1.0*skewMatrix(0, 0))> res = {skewMatrix(0, 0)*1.0, skewMatrix(0, 0)*1.0, skewMatrix(0, 0)*1.0};
 
-    Vector<decltype(1.0*skewMatrix(0, 0))> res = {skewMatrix(2, 1), skewMatrix(0, 2), skewMatrix(1, 0)};
+    res(0) = (skewMatrix(2, 1) - skewMatrix(1, 2))/2;
+    res(1) = (skewMatrix(0, 2) - skewMatrix(2, 0))/2;
+    res(2) = (skewMatrix(1, 0) - skewMatrix(0, 1))/2;
+
+    
     return res;
 }
 

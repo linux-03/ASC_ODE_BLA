@@ -137,7 +137,6 @@ Vector<double> RigidBodySystem::ExpandState()
     x.segment(base + 18, 3) = rb.p_trans();
     x.segment(base + 21, 3) = rb.p_skew();
   }
-
   return x;
 }
 
