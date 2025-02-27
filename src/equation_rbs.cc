@@ -56,7 +56,7 @@ void RigidBodySystemEquation::EvaluateDeriv (VectorView<double> x, MatrixView<do
 
   Vector<AutoDiff<30, double>> x_diff = x;
   size_t prev_index = 0;
-  Vector<AutoDiff<30, double>> f_diff(2*rbs_.get().NumBeams());
+  Vector<AutoDiff<30, double>> f_diff(dim_per_beam()*rbs_.get().NumBeams());
 
   for (size_t bd_index = 0; bd_index < rbs_.get().NumBodies(); bd_index++) {
 
@@ -69,15 +69,13 @@ void RigidBodySystemEquation::EvaluateDeriv (VectorView<double> x, MatrixView<do
 
     for (size_t i = 0; i < rbs_.get().NumBeams(); i++ )
     {
-      f_diff.segment(this->BodyDimensions() + i*dim_per_beam(), dim_per_beam()/2) = this->rbs_.get().Constraint(x, i);
-      f_diff.segment(this->BodyDimensions() + i*dim_per_beam() + dim_per_beam()/2, dim_per_beam()/2) = this->rbs_.get().Velocity_Constraint(x, i);
-      //std::cout << "f1: " << this->rbs_.get().Constraint(x, i) << std::endl;
-      //std::cout << "f2: " << this->rbs_.get().Velocity_Constraint(x, i) << std::endl;
+      f_diff.segment(i*dim_per_beam(), dim_per_beam()/2) = this->rbs_.get().Constraint(x_diff, i);
+      f_diff.segment(i*dim_per_beam() + dim_per_beam()/2, dim_per_beam()/2) = this->rbs_.get().Velocity_Constraint(x_diff, i);
     }
     
     for (size_t j = 0; j < rbs_.get().NumBeams(); j++) {
       for (size_t i = 0; i < dim_per_beam(); i ++) {
-        df.Row(this->BodyDimensions() + 2*j).segment(dim_per_body()*bd_index, dim_per_body()) = f_diff(dim_per_beam()*j + i);
+        df.Row(this->BodyDimensions() + dim_per_beam()*j + i).segment(dim_per_body()*bd_index, dim_per_body()) = f_diff(dim_per_beam()*j + i);
       }
     }
   }

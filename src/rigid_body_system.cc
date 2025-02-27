@@ -123,7 +123,7 @@ void RigidBodySystem::ManageConstraints(const VectorView<double> x)
 
 Vector<double> RigidBodySystem::ExpandState()
 {
-  Vector<double> x((this->NumBodies())*dim_per_body() + 2*(this->NumBeams()));
+  Vector<double> x((this->NumBodies())*dim_per_body() + dim_per_beam()*(this->NumBeams()));
   x.setConstant(0);
   
   for (size_t i = 0; i < this->NumBodies(); i++)
@@ -152,8 +152,8 @@ void RigidBodySystem::add(Beam& bm)
   bm.Index() = this->num_beams_;
   this->num_beams_++;
 
-  Vector<double> abs_pos_b = bm.ConnectorA().Position(this->Bodies(bm.BodyIndexA()).Vector_q());
-  Vector<double> abs_pos_a = bm.ConnectorB().Position(this->Bodies(bm.BodyIndexB()).Vector_q());
+  Vector<double> abs_pos_a = bm.ConnectorA().Position(this->Bodies(bm.BodyIndexA()).Vector_q());
+  Vector<double> abs_pos_b = bm.ConnectorB().Position(this->Bodies(bm.BodyIndexB()).Vector_q());
 
   bm.RelPosAToB() = abs_pos_a - this->Bodies(bm.BodyIndexB()).q_trans();
   bm.RelPosBToA() = abs_pos_b - this->Bodies(bm.BodyIndexA()).q_trans();

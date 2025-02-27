@@ -82,7 +82,9 @@ class RigidBodySystem {
       Vector<T> pos1_rel = bm.RelPosBToA();
       Vector<T> pos2 = x.segment(bd_index_a*dim_per_body(), 3) + ToMatrix(x.segment(bd_index_a*dim_per_body() + 3, 9))*pos1_rel;
       Vector<T> q = pos1 - pos2;
-
+      //q(0) = (pos1(0) - pos2(0))*(pos1(0) - pos2(0));
+      //q(1) = (pos1(1) - pos2(1))*(pos1(1) - pos2(1));
+      //q(2) = (pos1(2) - pos2(2))*(pos1(2) - pos2(2));
       
       return q;
     }
@@ -120,6 +122,9 @@ class RigidBodySystem {
       Vector<AutoDiff<12, T>> pos1_rel = bm.RelPosBToA();
       Vector<AutoDiff<12, T>> pos2 = q_a_diff.segment(0, 3) + ToMatrix(q_a_diff.segment(3, 9))*pos1_rel;
       Vector<AutoDiff<12, T>> q = pos1 - pos2;
+      //q(0) = (pos1(0) - pos2(0))*(pos1(0) - pos2(0));
+      //q(1) = (pos1(1) - pos2(1))*(pos1(1) - pos2(1));
+      //q(2) = (pos1(2) - pos2(2))*(pos1(2) - pos2(2));
 
       //AutoDiff<12, T> g = q.squaredNorm();
       //Vector<AutoDiff<12, T>> q = q_a_diff.segment(0, 3) + ToMatrix(q_a_diff.segment(3, 9))*pos1 - q_b_diff.segment(0, 3) - ToMatrix(q_b_diff.segment(3, 9))*pos2;
@@ -158,8 +163,10 @@ class RigidBodySystem {
       size_t bd_index_a = bm.BodyIndexA();
       size_t bd_index_b = bm.BodyIndexB();
 
+      //std::cout << std::endl << G_single_body_beam_n(bm, bd_index_a, x.segment(bd_index_a*dim_per_body(), 12), x.segment(bd_index_b*dim_per_body(), 12)).transpose() << std::endl;
+
       G_a += G_single_body_beam_n(bm, bd_index_a, x.segment(bd_index_a*dim_per_body(), 12), x.segment(bd_index_b*dim_per_body(), 12)).transpose();
-      G_b += G_single_body_beam_n(bm, bd_index_b, x.segment(bd_index_a*dim_per_body(), 12), x.segment(bd_index_b*dim_per_body(), 12)).transpose();
+      G_b += G_single_body_beam_n(bm, bd_index_b, x.segment(bd_index_a*dim_per_body(), 12), x.segment(bd_index_a*dim_per_body(), 12)).transpose();
       
       Matrix<T> R_a = ToMatrix(x.segment(bd_index_a * dim_per_body() + 3, 9)) * vectorToSkewSymmetric( x.segment(bd_index_a * dim_per_body() + 18 + 3, 3) ) ;
       Matrix<T> R_b = ToMatrix(x.segment(bd_index_b * dim_per_body() + 3, 9)) * vectorToSkewSymmetric( x.segment(bd_index_b * dim_per_body() + 18 + 3, 3) ) ;

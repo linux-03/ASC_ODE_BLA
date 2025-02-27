@@ -25,10 +25,12 @@ namespace ASC_ode {
 
     if (old)
     {
+      //std::cout << rb_.Constraints() << std::endl;
       for (size_t i = 0; i < rb_.Beams().size(); i++)
       {
         size_t bm_index = rb_.Beams()[i];
-        
+        //std::cout << rb_.Constraints().Block(0, i*dim_per_beam()/2, 12, dim_per_beam()/2) << std::endl;
+        //std::cout << dim_per_body()*rbs_.NumBodies() + dim_per_beam()*bm_index << std::endl;
         res += rb_.Constraints().Block(0, i*dim_per_beam()/2, 12, dim_per_beam()/2) * x.segment(dim_per_body()*rbs_.NumBodies() + dim_per_beam()*bm_index, dim_per_beam()/2);
       }
     } else {
@@ -59,7 +61,7 @@ namespace ASC_ode {
     Vector<double> vel_con_new = FuncConstraint(x, false);
 
     //std::cout << "force_new: " << force_new << std::endl << std::endl;
-    //std::cout << "vel_con_new: " << vel_con_new << std::endl << std::endl;
+    std::cout << "vel_con_new: " << vel_con_new << std::endl << std::endl;
     //std::cout << "force_old: " << force_old << std::endl << std::endl;
     //std::cout << "vel_con_old: " << vel_con_old << std::endl << std::endl;
     // q_trans 3 q_rot 9 p_half 6 p 6 v 6 lambda 1 mu 1
@@ -190,26 +192,29 @@ namespace ASC_ode {
 
     prev_index = 0;
 
-    Vector<AutoDiff<2, double>> x_bm_diff = x;
-    Vector<AutoDiff<2, double>> f_bm_diff(30);
+    Vector<AutoDiff<6, double>> x_bm_diff = x;
+    Vector<AutoDiff<6, double>> f_bm_diff(30);
     
     for (size_t bm_index = 0; bm_index < rbs_.NumBeams(); bm_index++) {
-      x_bm_diff(dim_per_body()*rbs_.NumBodies() + 2*prev_index).DValue(0) = 0;
-      x_bm_diff(dim_per_body()*rbs_.NumBodies() + 2*prev_index + 1).DValue(1) = 0;
+      for (size_t j = 0; j < dim_per_beam(); j++) {
+        x_bm_diff(dim_per_body()*rbs_.NumBodies() + dim_per_beam()*prev_index + j).DValue(j) = 0;
 
-      x_bm_diff(dim_per_body()*rbs_.NumBodies() + 2*bm_index).DValue(0) = 1;
-      x_bm_diff(dim_per_body()*rbs_.NumBodies() + 2*bm_index + 1).DValue(1) = 1;
-      prev_index = bm_index;
+        x_bm_diff(dim_per_body()*rbs_.NumBodies() + dim_per_beam()*bm_index + j).DValue(j) = 1;
+        
+        prev_index = bm_index;
+      }
 
 
-      Matrix<AutoDiff<2, double>> Rmean = 0.5*(ToMatrix(x_bm_diff.segment(3, 9)) + rb_.q());
-      Matrix<AutoDiff<2, double>> Rnew = ToMatrix(x_bm_diff.segment(3,9));
+      Matrix<AutoDiff<6, double>> Rmean = 0.5*(ToMatrix(x_bm_diff.segment(3, 9)) + rb_.q());
+      Matrix<AutoDiff<6, double>> Rnew = ToMatrix(x_bm_diff.segment(3,9));
 
-      Vector<AutoDiff<2, double>> force_old = rb_.Force();
-      Vector<AutoDiff<2, double>> vel_con_old = FuncConstraint(x_bm_diff, true);
+      Vector<AutoDiff<6, double>> force_old = rb_.Force();
+      Vector<AutoDiff<6, double>> vel_con_old = FuncConstraint(x_bm_diff, true);
 
-      Vector<AutoDiff<2, double>> force_new = rbs_.PotentialGradient(x_bm_diff, rb_.Index());
-      Vector<AutoDiff<2, double>> vel_con_new = FuncConstraint(x_bm_diff, false);
+      Vector<AutoDiff<6, double>> force_new = rbs_.PotentialGradient(x_bm_diff, rb_.Index());
+      Vector<AutoDiff<6, double>> vel_con_new = FuncConstraint(x_bm_diff, false);
+
+      //std::cout << vel_con_new << std::endl;
 
       // q_trans 3 q_rot 9 p_half 6 p 6 v 6 lambda 1 mu 1
       //std::cout << x << std::endl << std::endl;
@@ -233,7 +238,7 @@ namespace ASC_ode {
     }
 
     for (size_t j = 0; j < 30; j++) {
-      df.Row(rb_.Index()*dim_per_body() + j).segment(dim_per_body()*rbs_.NumBodies(), 2) = f_bm_diff(j); 
+      df.Row(rb_.Index()*dim_per_body() + j).segment(dim_per_body()*rbs_.NumBodies(), dim_per_beam()) = f_bm_diff(j); 
     }
     
   }
