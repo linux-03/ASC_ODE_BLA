@@ -4,13 +4,13 @@
 #include "equation_rbs.h"
 #include <chrono>
 
-RigidBodySystemEquation::RigidBodySystemEquation(RigidBodySystem& rbs, double step_size): rbs_(std::ref(rbs)), h_(step_size)
+RigidBodySystemEquation::RigidBodySystemEquation(RigidBodySystem& rbs, double step_size): x_(rbs.NumBodies()*dim_per_body() + rbs.NumBeams()*dim_per_beam()), rbs_(std::ref(rbs)), h_(step_size)
 {
   this->dimF_ = rbs.NumBodies()*dim_per_body() + rbs.NumBeams()*dim_per_beam();
   this->dimX_ = rbs.NumBodies()*dim_per_body() + rbs.NumBeams()*dim_per_beam();
 
-  Vector<double> x = rbs.ExpandState();
-  rbs.ManageConstraints(x);
+  this->x_ = rbs.ExpandState();
+  rbs.ManageConstraints(x_);
 
   for (size_t i = 0; i < rbs.NumBodies(); i++)
   {
@@ -30,6 +30,11 @@ size_t RigidBodySystemEquation::DimF() const
 size_t RigidBodySystemEquation::BodyDimensions() const
 {
   return this->rbs_.get().NumBodies()*dim_per_body();
+}
+
+VectorView<double> RigidBodySystemEquation::x()
+{
+  return this->x_;
 }
 
 void RigidBodySystemEquation::Evaluate (VectorView<double> x, VectorView<double> f) const
@@ -78,8 +83,42 @@ void RigidBodySystemEquation::EvaluateDeriv (VectorView<double> x, MatrixView<do
       df.Row(this->BodyDimensions() + 2*j + 1).segment(dim_per_body()*bd_index, dim_per_body()) = f_diff(2*j + 1); 
     }
   }
+
+  
   
   //dNumeric(*(this), x, df);
+}
+
+void RigidBodySystemEquation::step()
+{
+
+  // Start timing
+  //auto start_time = std::chrono::high_resolution_clock::now();
+
+  x_ = rbs_.get().ExpandState();
+
+  NewtonSolver((*this), x_, 1e-8, 16);
+  //std::cout << x_.segment(3, 9) << std::endl;
+  rbs_.get().SaveState(x_);
+
+  //auto end_time = std::chrono::high_resolution_clock::now();
+  /* std::chrono::duration<double> elapsed = end_time - start_time;
+  double elapsed_time = elapsed.count();  // Elapsed time in seconds
+
+  // Sleep if the step was faster than h_
+  std::cout << elapsed_time << std::endl;
+  if (elapsed_time < 2*h_)
+  {
+      std::this_thread::sleep_for(std::chrono::duration<double>(h_*2 - elapsed_time));
+  } */
+  
+}
+
+RigidBodySystemEquation assemble(RigidBodySystem& rbs, double step_size)
+{
+  RigidBodySystemEquation eqrb(rbs, step_size);
+
+  return eqrb;
 }
 
 void simulate_rbs(RigidBodySystem& rbs, double step_size, size_t steps_, std::function<void(int,double,VectorView<double>)> callback)
@@ -87,13 +126,24 @@ void simulate_rbs(RigidBodySystem& rbs, double step_size, size_t steps_, std::fu
 {
   RigidBodySystemEquation eqrb(rbs, step_size);
 
-  Vector<double> x = rbs.ExpandState();
+  eqrb.x() = rbs.ExpandState();
 
   auto start = std::chrono::high_resolution_clock::now();
   for (size_t i = 0; i < steps_; i++) {
-    NewtonSolver(eqrb, x, 1e-8, 16, callback);
-    std::cout << "step: " << i << std::endl;
-    rbs.SaveState(x);
+    for (size_t i = 0; i < rbs.NumBodies(); i++)
+    {
+      
+      size_t base = i*dim_per_body();
+
+      eqrb.x().segment(base + 12, + 6) = 0;
+      eqrb.x().segment(base + 24, 30) = 0;
+    }
+    NewtonSolver(eqrb, eqrb.x(), 1e-8, 16, callback);
+   
+    //std::cout << "step: " << i << std::endl;
+    
+    //std::cout << eqrb.x().segment(3, 9) << std::endl;
+    rbs.SaveState(eqrb.x());
     //x(30)=0;
     //x(31)=0;
 

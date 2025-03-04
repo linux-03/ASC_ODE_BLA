@@ -53,12 +53,15 @@ class RigidBodySystem {
       Matrix<T> G(12, this->Bodies(body_index).Beams().size());
       G.setConstant(0);
       
-      for (size_t bm_index: this->Bodies(body_index).Beams())
-      {
-        Beam bm = Beams(bm_index);
+      for (size_t i = 0; i < this->Bodies(body_index).Beams().size(); i++)
+      { 
+        Beam bm = Beams(this->Bodies(body_index).Beams()[i]);
         size_t index_a = bm.BodyIndexA();
         size_t index_b = bm.BodyIndexB();
-        G.Col(bm_index).segment(0, 12) += G_single_body_beam_n( bm, body_index, x.segment(index_a*dim_per_body(), 12), x.segment(index_b*dim_per_body(), 12));
+        //std::cout << "body: " << body_index << " " << Bodies(body_index).Beams().size() << std::endl;
+        //std::cout << "Beams: " << i << " " << this->Bodies(body_index).Beams().size() << std::endl;
+        //std::cout << G.Col(i) << std::endl;
+        G.Col(i).segment(0, 12) += G_single_body_beam_n(bm, body_index, x.segment(index_a*dim_per_body(), 12), x.segment(index_b*dim_per_body(), 12));
         //std::cout << G << std::endl;
       }
 
@@ -259,6 +262,7 @@ class RigidBodySystem {
     void SaveState(const VectorView<double> x);
     void ManageConstraints(const VectorView<double> x);
     Vector<double> ExpandState();
+    
 
     void add(RigidBody& rb);
     void add(Beam& bm);

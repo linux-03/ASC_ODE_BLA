@@ -106,9 +106,18 @@ PYBIND11_MODULE(rigid_body_FEM, rbd) {
       .def("add", py::overload_cast<Beam&>(&RigidBodySystem::add))
       .def("add", py::overload_cast<Spring&>(&RigidBodySystem::add))
       .def("saveState", &RigidBodySystem::SaveState)
+      .def("expandState", &RigidBodySystem::ExpandState)
       .def("beams", py::overload_cast<>(&RigidBodySystem::Beams))
       .def("bodies", py::overload_cast<>(&RigidBodySystem::Bodies))
-      .def("connectorPos", [](RigidBodySystem& r, Connector c){auto v = r.connectorPosition(c); return py::make_tuple(v(0),v(1),v(2));});
+      .def("connectorPos", [](RigidBodySystem& r, Connector c){auto v = r.connectorPosition(c); return py::make_tuple(v(0),v(1),v(2));})
+      .def("assemble", [](RigidBodySystem& r, double step_size){ return assemble(r, step_size);});
 
+    py::class_<RigidBodySystemEquation> (rbd, "RigidBodyEquation")
+      .def(py::init<RigidBodySystem&, double>())
+      .def("step", &RigidBodySystemEquation::step);
+    
+    
     rbd.def("simulate",[](RigidBodySystem& rbs, double tend, double steps) {simulate_rbs(rbs, tend, steps);});
+
+    rbd.def("init_simulate", [](RigidBodySystem& rbs, double tend, double steps){});
 }
