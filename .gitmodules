@@ -1,0 +1,3 @@
+[submodule "bla"]
+	path = bla
+	url = git@github.com:linux-03/bla.git
