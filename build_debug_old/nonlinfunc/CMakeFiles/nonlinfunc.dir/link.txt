@@ -1,0 +1,2 @@
+/usr/bin/ar qc libnonlinfunc.a CMakeFiles/nonlinfunc.dir/nonlinfunc.cc.o CMakeFiles/nonlinfunc.dir/Newton.cc.o
+/usr/bin/ranlib libnonlinfunc.a
