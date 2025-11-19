@@ -6,7 +6,7 @@
 using namespace ASC_bla;
 
 RigidBody::RigidBody(): force_(12), q_trans_(3), q_(3, 3), p_trans_(3),
-p_skew_(3), p_half_trans_(3), p_half_skew_(3), v_trans_(3), v_skew_(3)
+p_skew_(3), p_half_trans_(3), p_half_skew_(3), v_trans_(3), v_skew_(3), mass_(1.0), inertia_(Diagonal(3, 1.0)), mass_matrix_(Diagonal(6, 1.0)), mass_matrix_inv_(6,6)
 {
   q_trans_.setConstant(0);
   q_.setConstant(0);
@@ -21,7 +21,7 @@ p_skew_(3), p_half_trans_(3), p_half_skew_(3), v_trans_(3), v_skew_(3)
 }
 
 RigidBody::RigidBody(VectorView<double> q, VectorView<double> p): force_(12), q_trans_(3), q_(3, 3), p_trans_(3),
-p_skew_(3), p_half_trans_(3), p_half_skew_(3), v_trans_(3), v_skew_(3)
+p_skew_(3), p_half_trans_(3), p_half_skew_(3), v_trans_(3), v_skew_(3), mass_(1.0), inertia_(Diagonal(3, 1.0)), mass_matrix_(Diagonal(6, 1.0)), mass_matrix_inv_(6,6)
 {
   q_trans_ = q.segment(0, 3);
   q_ = ToMatrix(q.segment(3, 9));
@@ -33,8 +33,25 @@ p_skew_(3), p_half_trans_(3), p_half_skew_(3), v_trans_(3), v_skew_(3)
   v_skew_.setConstant(0);
 }
 
+RigidBody::RigidBody(double mass, MatrixView<double> inertia): force_(12), q_trans_(3), q_(3, 3), p_trans_(3),
+p_skew_(3), p_half_trans_(3), p_half_skew_(3), v_trans_(3), v_skew_(3), mass_(mass), inertia_(inertia), mass_matrix_(6,6), mass_matrix_inv_(6,6)
+{
+  q_trans_.setConstant(0);
+  q_.setConstant(0);
+  p_trans_.setConstant(0);
+  p_skew_.setConstant(0);
+  p_half_trans_.setConstant(0);
+  p_half_skew_.setConstant(0);
+  v_trans_.setConstant(0);
+  v_skew_.setConstant(0);
+
+  q_.diagonal(1);
+  recalcMassMatrix();
+}
+
+
 RigidBody::RigidBody(const RigidBody& other): force_(12), q_trans_(3), q_(3, 3), p_trans_(3),
-p_skew_(3), p_half_trans_(3), p_half_skew_(3), v_trans_(3), v_skew_(3) {
+p_skew_(3), p_half_trans_(3), p_half_skew_(3), v_trans_(3), v_skew_(3), mass_(other.mass_), inertia_(other.inertia_), mass_matrix_(other.mass_matrix_), mass_matrix_inv_(other.mass_matrix_inv_) {
   q_trans_ = other.q_trans_;
   q_ = other.q_;
   p_trans_ = other.p_trans_;
@@ -52,6 +69,18 @@ p_skew_(3), p_half_trans_(3), p_half_skew_(3), v_trans_(3), v_skew_(3) {
   vertices_ = other.vertices_;
   normals_ = other.normals_;
 }
+
+void RigidBody::recalcMassMatrix() {
+    mass_matrix_ = Matrix(6, 6);
+    mass_matrix_(0, 0) = 1.0;
+    mass_matrix_(1, 1) = 1.0;
+    mass_matrix_(2, 2) = 1.0;
+    mass_matrix_ = mass_*mass_matrix_;
+    mass_matrix_.Rows(3, 3).Cols(3, 3) = inertia_; // inertia matrix is already multiplied with mass
+    //std::cout << "here " << inertia_ << std::endl;
+    //std::cout << "Mass matrix:\n" << MassMatrix() << std::endl;
+    mass_matrix_inv_ = inverse(mass_matrix_);
+  }
 
 VectorView<double> RigidBody::q_trans()
 {
@@ -96,6 +125,22 @@ VectorView<double> RigidBody::p_trans()
 VectorView<double> RigidBody::p_skew()
 {
   return p_skew_;
+}
+MatrixView<double> RigidBody::MassMatrix()
+{
+  return mass_matrix_;
+}
+MatrixView<double> RigidBody::MassMatrixInv()
+{
+  return mass_matrix_inv_;
+}
+MatrixView<double> RigidBody::Inertia()
+{
+  return inertia_;
+}
+double RigidBody::Mass()
+{
+  return mass_;
 }
 
 double& RigidBody::lambda()

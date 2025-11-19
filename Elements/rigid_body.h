@@ -26,11 +26,16 @@ class RigidBody {
     std::vector<size_t> beams_;
     std::unique_ptr<Matrix<double>> constraints_ = nullptr;
     Vector<double> force_;
+    Matrix<double> mass_matrix_;
+    Matrix<double> mass_matrix_inv_;
+    Matrix<double> inertia_;
+    double mass_;
     
 
   public:
     RigidBody();
-    RigidBody(VectorView<double> q, VectorView<double> p);    
+    RigidBody(VectorView<double> q, VectorView<double> p);
+    RigidBody(double mass, MatrixView<double> inertia);    
 
     RigidBody(const RigidBody& other);
 
@@ -42,9 +47,14 @@ class RigidBody {
     VectorView<double> v_skew();
     VectorView<double> p_trans();
     VectorView<double> p_skew();
+    MatrixView<double> MassMatrix();
+    MatrixView<double> MassMatrixInv();
+    MatrixView<double> Inertia();
+    double Mass();
     double& lambda();
     double& mu();
     Vector<double> Vector_q();
+    void recalcMassMatrix();
 
     size_t& Index();
     std::vector<size_t>& Beams();

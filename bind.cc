@@ -58,6 +58,7 @@ PYBIND11_MODULE(rigid_body_FEM, rbd) {
     py::class_<RigidBody> (rbd, "RigidBody_FEM")
       .def(py::init<>())
       .def(py::init<Vector<double>, Vector<double>>())
+      .def(py::init<double, Matrix<double>>())
       .def("asTuple",[](RigidBody& rb){
         // *column-major* transformation matrix as in https://threejs.org/docs/#api/en/math/Matrix4
         // converts Schöberl-style ordering of Q to column-major ordering of a three.js transformation matrix:

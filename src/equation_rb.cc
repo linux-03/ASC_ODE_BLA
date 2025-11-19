@@ -77,7 +77,8 @@ namespace ASC_ode {
 
     f.setConstant(0);
 
-    f.segment(0, 6) = v - p;
+    f.segment(0, 6) = rb_.MassMatrix() * v - p;
+    //std::cout << "MassMatrix:\n" << rb_.MassMatrix() << std::endl;
     
     f.segment(6, 3) = q_new.segment(0, 3) - rb_.q_trans() - h_*p.segment(0, 3); // q_trans_n - q_trans - h_*p
     f.segment(9, 3) = skewSymmetricToVector((ToMatrix(q_new.segment(3, 9)) - rb_.q()) - h_*Rmean*vectorToSkewSymmetric(p.segment(3, 3)));
@@ -156,7 +157,7 @@ namespace ASC_ode {
       //std::cout << x << std::endl << std::endl;
       
       
-      f_diff.segment(0, 6) = v - p;
+      f_diff.segment(0, 6) = rb_.MassMatrix() * v - p;
     
       f_diff.segment(6, 3) = q_new.segment(0, 3) - rb_.q_trans() - h_*p.segment(0, 3); // q_trans_n - q_trans - h_*p
       f_diff.segment(9, 3) = skewSymmetricToVector((ToMatrix(q_new.segment(3, 9)) - rb_.q()) - h_*Rmean*vectorToSkewSymmetric(p.segment(3, 3)));
@@ -222,7 +223,7 @@ namespace ASC_ode {
 
       
       
-      f_bm_diff.segment(0, 6) = v - p;
+      f_bm_diff.segment(0, 6) = rb_.MassMatrix() * v - p;
     
       f_bm_diff.segment(6, 3) = q_new.segment(0, 3) - rb_.q_trans() - h_*p.segment(0, 3); // q_trans_n - q_trans - h_*p
       f_bm_diff.segment(9, 3) = skewSymmetricToVector((ToMatrix(q_new.segment(3, 9)) - rb_.q()) - h_*Rmean*vectorToSkewSymmetric(p.segment(3, 3)));

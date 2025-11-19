@@ -65,7 +65,8 @@ def body_from_solid(obj):
     for i in range(3): center_of_mass[i] = obj.center[i]
 
     # rearrange it in C++ to make the mass matrix (the elegant way, using MatrixView)
-    body = RigidBody_FEM()
+    body = RigidBody_FEM(obj.mass, inertia_matrix)
+    #print(inertia_matrix)
     #for i in range(3) : body.center[i] = obj.center[i]
     #body.mass = obj.mass
     #body.inertia = inertia_matrix
