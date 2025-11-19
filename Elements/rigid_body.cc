@@ -58,6 +58,11 @@ VectorView<double> RigidBody::q_trans()
   return q_trans_;
 }
 
+size_t RigidBody::ConstraintNumberHalf() const
+{
+  return this->constraint_number_half_;
+}
+
 MatrixView<double> RigidBody::q()
 {
   return q_;
@@ -120,22 +125,23 @@ std::vector<size_t>& RigidBody::Beams()
   return this->beams_;
 }
 
-void RigidBody::addBeam(size_t i)
+void RigidBody::addBeam(size_t i, size_t constraint_number)
 {
   if (std::find(this->beams_.begin(), this->beams_.end(), i) == this->beams_.end())
   {
+    this->constraint_number_half_ += constraint_number;
     this->beams_.push_back(i);
-    this->constraints_.reset(new Matrix(12, beams_.size()));
+    this->constraints_.reset(new Matrix(this->constraint_number_half_, 12));
     this->constraints_->setConstant(0);
   }
 }
 
-MatrixView<double> RigidBody::Constraints()
+Matrix<double>& RigidBody::Constraints()
 {
   return *(this->constraints_);
 }
 
-VectorView<double> RigidBody::Force()
+Vector<double>& RigidBody::Force()
 {
   return this->force_;
 }

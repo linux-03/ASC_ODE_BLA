@@ -13,7 +13,6 @@ namespace ASC_ode {
     Matrix<double> fprime(func.DimF(), func.DimX());
     fprime.setConstant(0);
 
-
     size_t count = 0;
     //std::cout << std::fixed << "x in = " << x << std::endl;
     for (int i = 0; i < maxsteps; i++)
@@ -26,15 +25,17 @@ namespace ASC_ode {
         func.EvaluateDeriv(x, fprime);
 
         //std::cout << "x: " << x << std::endl << std::endl;
+        
         //std::cout << fprime << std::endl;
         Matrix<double> fprime_inv = inverse(fprime);
         
         x -= fprime_inv*res;
 
-        //td::cout << fprime_inv << std::endl << std::endl << std::endl;
+        //std::cout << fprime_inv << std::endl << std::endl << std::endl;
         //std::cout << std::fixed <<  "x: " << x << std::endl;
         //throw std::domain_error("Newton did not converge");
         //std::cout << x << std::endl << std::endl;
+        //std::cout << "Step " << i << ", residual" << res << std::endl;
         
         double err = res.norm();
         if (callback_)

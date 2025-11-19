@@ -31,7 +31,7 @@ class RigidBodySystemEquation: public NonlinearFunction
     void EvaluateDeriv (VectorView<double> x, MatrixView<double> df) const;
 
     void step();
-    VectorView<double> x();
+    Vector<double>& x();
 
     size_t BodyDimensions() const;
 };

@@ -1,6 +1,6 @@
 from netgen.occ import *
 import sys
-sys.path.append("../build_debug/")
+sys.path.append("../build_release/")
 from rigid_body_FEM import *
 from rigid_body_FEM.bla import *
 import pythreejs as p3

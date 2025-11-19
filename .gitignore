@@ -37,6 +37,7 @@ build/**
 rbd_build/**
 build_release/**
 build_debug/**
+build_debug_old/**
 
 .ipynb_checkpoints
 .pyodide-xbuildenv*

@@ -10,7 +10,6 @@ using namespace ASC_bla;
 
 template<typename T>
 Matrix<T> ToMatrix(VectorView<T> vec) {
-  //std::cout << vec << std::endl;
   Matrix<T> res(3, 3);
   res.Row(0) = vec.segment(0, 3);  // First row
   res.Row(1) = vec.segment(3, 3);  // Second row
@@ -31,6 +30,12 @@ Vector<T> ToVector(MatrixView<T> m) {
   return res;
 }
 
+template<typename T, typename S>
+auto ApplyTransformation(const VectorView<T> q, const VectorView<S> pos) {
+  Matrix<decltype(q(0)* pos(0))> R = ToMatrix(q.segment(3, 9));
+  Vector<decltype(q(0)* pos(0))> res = q.segment(0, 3) + R * pos;
+  return res;
+}
 // Function to convert a 3D vector to a skew-symmetric matrix (hat operator)
 template<typename T>
 Matrix<T> vectorToSkewSymmetric(const VectorView<T> v) {

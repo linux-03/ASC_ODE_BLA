@@ -53,10 +53,16 @@ namespace ASC_ode
   void StackedFunction_large_input::Evaluate (VectorView<double> x, VectorView<double> f) const {
     size_t cursor_f=0;
     for(auto func : _functions){
+      //std::cout << func->DimF() << std::endl;
+      //std::cout << func->DimX() << std::endl;
+      //std::cout << f.Size() << std::endl;
+      //std::cout << x.Size() << std::endl;
+      //std::cout << cursor_f << std::endl;
 
+      //std::cout << f.segment(cursor_f, func->DimF()) << std::endl;
       func->Evaluate(x, f.segment(cursor_f, func->DimF()));
 
-      //VectorXd f1(30);
+      //VectorXd f1(30);±
       //Map<VectorXd> f1_map(f1.data(), 30);
 
       //func->Evaluate(x, f1_map);
@@ -126,7 +132,7 @@ namespace ASC_ode
   }
 
   void dNumeric(const NonlinearFunction& f, VectorView<double> x, MatrixView<double> df){
-    double eps = 1e-12;
+    double eps = 1e-6;
     Vector<double> xl(x.Size()), xr(x.Size()), fl(f.DimF()), fr(f.DimF());
 
     for (size_t i = 0; i < x.Size(); i++)
@@ -135,17 +141,12 @@ namespace ASC_ode
         fr.setConstant(0);
         xl = x;
         xl(i) -= eps;
-        //std::cout<< xl << std::endl << std::endl;
+        
         xr = x;
         xr(i) += eps;
-        if (i == 1) {
-        //std::cout << "19" << std::endl;
-        //  std::cout << fl << std::endl;
-        //  std::cout << fr << std::endl;
-        }
+        
         f.Evaluate(xl, fl);
         f.Evaluate(xr, fr);
-        
         
         df.Col(i) = 1/(2*eps) * (fr-fl);
 

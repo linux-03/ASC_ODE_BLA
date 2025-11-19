@@ -22,23 +22,27 @@ namespace ASC_ode {
   {
     Vector<T> res(12);
     res.setConstant(0);
-
+    size_t constraint_count = 0;
     if (old)
     {
+      Matrix<T> constr = rb_.Constraints();
       for (size_t i = 0; i < rb_.Beams().size(); i++)
       {
-        size_t bm_index = rb_.Beams()[i];
-        
-        res +=  x(dim_per_body()*rbs_.NumBodies() + dim_per_beam()*bm_index) * rb_.Constraints().Col(i);
+        Beam& bm = rbs_.Beams(rb_.Beams()[i]);
+        res +=  constr.Rows(constraint_count, bm.NumberOfConstraints()/2).transpose() * x.segment(bm.StartIndex(), bm.NumberOfConstraints()/2);
+        constraint_count += bm.NumberOfConstraints()/2;
+        //std::cout << "old" << bm.Index()<< bm.StartIndex() << std::endl;
       }
     } else {
       Matrix<T> constr = rbs_.JacobianConstraint(x, rb_.Index());
-      //std::cout << "rb_.Index(): " << rb_.Index() << " -> constr: " << constr << std::endl;
+      //std::cout << "Computed df for body " << rb_.Index() << std::endl << constr << std::endl;
+      
       for (size_t i = 0; i < rb_.Beams().size(); i++)
       {
-        size_t bm_index = rb_.Beams()[i];
-        //std::cout << "bm_index: " << bm_index << std::endl;
-        res += x(dim_per_body()*rbs_.NumBodies() + dim_per_beam()*bm_index + 1) * constr.Col(i);
+        Beam& bm = rbs_.Beams(rb_.Beams()[i]);
+        res += constr.Rows(constraint_count, bm.NumberOfConstraints()/2).transpose() * x.segment(bm.StartIndex() + bm.NumberOfConstraints()/2, bm.NumberOfConstraints()/2);
+        constraint_count += bm.NumberOfConstraints()/2;
+        //std::cout << "new " << rb_.Index() << " " <<bm.Index() << " " << bm.StartIndex() << std::endl;
       }
     }
 
@@ -135,6 +139,7 @@ namespace ASC_ode {
 
       Vector<AutoDiff<30, double>> force_old = rb_.Force();
       Vector<AutoDiff<30, double>> vel_con_old = FuncConstraint(x_diff, true);
+      
 
       Vector<AutoDiff<30, double>> force_new = rbs_.PotentialGradient(x_diff, rb_.Index());
       Vector<AutoDiff<30, double>> vel_con_new = FuncConstraint(x_diff, false);
@@ -191,9 +196,8 @@ namespace ASC_ode {
 
     Vector<AutoDiff<2, double>> x_bm_diff = x;
     Vector<AutoDiff<2, double>> f_bm_diff(30);
-    
-    for (size_t bm_index = 0; bm_index < rbs_.NumBeams(); bm_index++) {
-      
+
+    for (size_t bm_index = 0; bm_index < rbs_.NumConstraints()/2; bm_index++) {
 
       x_bm_diff(dim_per_body()*rbs_.NumBodies() + 2*prev_index).DValue(0) = 0;
       x_bm_diff(dim_per_body()*rbs_.NumBodies() + 2*prev_index + 1).DValue(1) = 0;
@@ -230,7 +234,7 @@ namespace ASC_ode {
       f_bm_diff.segment(21, 3) = skewSymmetricToVector( Rnew.transpose() * (Rnew*vectorToSkewSymmetric(p_hat_new.segment(3, 3)) - Rmean * vectorToSkewSymmetric(p.segment(3, 3)) - (h_/2)*(ToMatrix(force_new.segment(3, 9)) + ToMatrix(vel_con_new.segment(3, 9)))));
 
       for (size_t j = 0; j < 30; j++) {
-        df.Row(j).segment(dim_per_body()*rbs_.NumBodies() + bm_index*dim_per_beam(), 2) = f_bm_diff(j); 
+        df.Row(j).segment(dim_per_body()*rbs_.NumBodies() + bm_index*2, 2) = f_bm_diff(j); 
       }
     }    
   }

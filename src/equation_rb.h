@@ -23,8 +23,6 @@ namespace ASC_ode {
       
       template<typename T>
       Vector<T> FuncConstraint(const VectorView<T> x, bool old) const;
-      
-
   };
 
   //void simulate(RigidBody& rb, double step_size, size_t steps_);

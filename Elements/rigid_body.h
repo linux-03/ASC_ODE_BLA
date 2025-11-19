@@ -22,6 +22,7 @@ class RigidBody {
     Vector<double> p_skew_;    // Momentum vector (6D: 3D translation + 3D rotation)
     double lambda_;
     double mu_;
+    size_t constraint_number_half_ = 0;
     std::vector<size_t> beams_;
     std::unique_ptr<Matrix<double>> constraints_ = nullptr;
     Vector<double> force_;
@@ -47,9 +48,10 @@ class RigidBody {
 
     size_t& Index();
     std::vector<size_t>& Beams();
-    void addBeam(size_t);
-    MatrixView<double> Constraints();
-    VectorView<double> Force();
+    void addBeam(size_t i, size_t constraint_number);
+    Matrix<double>& Constraints();
+    Vector<double>& Force();
+    size_t ConstraintNumberHalf() const;
 
     void add_vertex(const std::array<double, 3>& v);
     void add_normal(const std::array<double, 3>& n);

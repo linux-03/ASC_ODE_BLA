@@ -22,8 +22,8 @@ int main()  {
   rbs.add(rb1);
 
   Connector connect_a({0, 0, 0});
-  Connector connect_b({0, 0, 0}, rb.Index());
-  Connector connector_c({0,0,0}, rb1.Index());
+  Connector connect_b({0, 0, 0}, rb, ConnectorType::FREE);
+  Connector connector_c({0,0,0}, rb1, ConnectorType::FREE);
 
 
   Beam bm(connect_a, connect_b);
@@ -31,9 +31,6 @@ int main()  {
 
   rbs.add(bm);
   rbs.add(bm1);
-  std::cout << bm.Length();
-  //std::cout << bm1.Length();
-  //for (size_t i = 0; i < steps; i++) {
 
   RigidBodySystemEquation eq = assemble(rbs, 0.004);
   for (size_t i = 0; i < steps; i++)

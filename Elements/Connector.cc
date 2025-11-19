@@ -3,39 +3,55 @@
 
 #include "Connector.h"
 
-Connector::Connector(Vector<double> pos, size_t body_index_a)
+Connector::Connector(Vector<double> pos, RigidBody& rb, ConnectorType type)
 {
-  this->fix_ = false;
-  this->body_index_ = body_index_a;
+  this->type_ = type;
+  this->body_index_ = rb.Index();
   this->pos_ = pos;
+  this->initial_body_rot_ = rb.q();
+  this->initial_body_trans_ = rb.q_trans();
 }
 Connector::Connector(Vector<double> pos)
 {
-  this->fix_ = true;
+  this->type_ = ConnectorType::FIX;
   this->body_index_ = 0;
   this->pos_ = pos;
 }
 Connector::Connector(const Connector& other)
 {
-  this->fix_ = other.fix_;
+  this->type_ = other.type_;
   this->body_index_ = other.body_index_;
   this->pos_ = other.pos_;
+  this->initial_body_rot_ = other.initial_body_rot_;
+  this->initial_body_trans_ = other.initial_body_trans_;
 }
 size_t& Connector::BodyIndex()
 {
   return this->body_index_;
 }
-bool& Connector::Fix()
+ConnectorType& Connector::Type()
 {
-  return this->fix_;
+  return this->type_;
 }
-VectorView<double> Connector::RefPosition()
+Vector<double> Connector::RefPosition()
 {
   return pos_;
 }
 double Connector::RefPosition(size_t i)
 {
   return pos_(i);
+}
+Vector<double> Connector::InitialPosition()
+{
+  return this->initial_body_trans_ + this->initial_body_rot_ * this->pos_;
+}
+Vector<double> Connector::InitialBodyTranslation()
+{
+  return this->initial_body_trans_;
+}
+Matrix<double> Connector::InitialBodyRotation()
+{
+  return this->initial_body_rot_;
 }
 
 #endif

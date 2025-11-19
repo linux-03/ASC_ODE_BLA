@@ -25,16 +25,23 @@ PYBIND11_MODULE(rigid_body_FEM, rbd) {
     // the main bindings:
     rbd.doc() = "rigid body Shake and Rattle simulator";
 
+    py::enum_<ConnectorType>(rbd, "ConnectorType", py::module_local())
+      .value("FREE", ConnectorType::FREE)
+      .value("FIX", ConnectorType::FIX)
+      .value("SPHERICAL", ConnectorType::SPHERICAL)
+      .export_values();
+
     py::class_<Connector>(rbd,"Connector", py::module_local())
       .def(py::init<>())
       .def(py::init<Vector<double>>())
-      .def(py::init<Vector<double>, size_t>())
+      .def(py::init<Vector<double>, RigidBody&, ConnectorType>(),
+           py::arg("pos"), py::arg("rb"), py::arg("type") = ConnectorType::FREE)
       .def_property("RefPos",[](Connector& c){return py::make_tuple(c.RefPosition(0),c.RefPosition(1),c.RefPosition(2));},
                              [](Connector&c, std::array<double,3> vals){c.RefPosition()(0) = vals[0]; c.RefPosition()(1) = vals[1]; c.RefPosition()(2) = vals[2];})
       .def_property("body_index", [](Connector& c){return c.BodyIndex();},
                                   [](Connector&c, size_t i){ c.BodyIndex() = i;})
-      .def_property("type", [](Connector& c){return c.Fix();},
-                            [](Connector&c, bool t){ c.Fix() = t;});
+      .def_property("type", [](Connector& c){return c.Type();},
+                            [](Connector&c, ConnectorType t){ c.Type() = t;});
 
     py::class_<Beam>(rbd,"Beam", py::module_local())
       .def(py::init<>([](Connector a, Connector b){return Beam{a,b};}))

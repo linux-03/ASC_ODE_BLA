@@ -5,8 +5,7 @@ list(APPEND CMAKE_PREFIX_PATH "${PYBIND11_DIR}")
 
 
 
-add_library(src STATIC 
-    rigid_body.cc 
+add_library(src STATIC  
     rigid_body_system.cc 
     equation_rb.cc 
     equation_rbs.cc

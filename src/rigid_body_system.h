@@ -11,6 +11,7 @@ using namespace std;
 class RigidBodySystem {
     size_t num_beams_;
     size_t num_springs_;
+    size_t num_constraints_ = 0;
     std::vector<std::reference_wrapper<RigidBody>> bodies_;
     std::vector<std::reference_wrapper<Beam>> beams_;
     std::vector<std::reference_wrapper<Spring>> springs_;
@@ -40,6 +41,22 @@ class RigidBodySystem {
       return pot_grad;
     }
 
+
+    /**
+    * @brief Computes the length constraint of a beam
+    *
+    * @param x The full position vector containing each position and momentum of each body
+    * @param beam_index The index of the beam to have the constraint calculated
+    * @return Value T of the length difference
+    */
+    template<typename T>
+    Vector<T> Constraint(const VectorView<T> x, size_t beam_index)
+    {
+      Beam& bm = this->beams_[beam_index];
+      return bm.Constraint(x.segment(bm.BodyIndexA()*dim_per_body(), 12), x.segment(bm.BodyIndexB()*dim_per_body(), 12));
+    }
+
+
     /**
     * @brief Computes the Jacobien of the function of all constraint derived after a specific body
     *
@@ -50,124 +67,23 @@ class RigidBodySystem {
     template<typename T>
     Matrix<T> JacobianConstraint(const VectorView<T> x, size_t body_index)
     {
-      Matrix<T> G(12, this->Bodies(body_index).Beams().size());
+      Matrix<T> G(this->Bodies(body_index).ConstraintNumberHalf(), 12);
+      //std::cout << "Computing G for body " << body_index <<  " Contraints: " << this->Bodies(body_index).ConstraintNumberHalf() << std::endl;
       G.setConstant(0);
-      
+      double constraint_counter = 0;
       for (size_t i = 0; i < this->Bodies(body_index).Beams().size(); i++)
       { 
         Beam bm = Beams(this->Bodies(body_index).Beams()[i]);
         size_t index_a = bm.BodyIndexA();
         size_t index_b = bm.BodyIndexB();
-        //std::cout << "body: " << body_index << " " << Bodies(body_index).Beams().size() << std::endl;
-        //std::cout << "Beams: " << i << " " << this->Bodies(body_index).Beams().size() << std::endl;
-        //std::cout << G.Col(i) << std::endl;
-        G.Col(i).segment(0, 12) += G_single_body_beam_n(bm, body_index, x.segment(index_a*dim_per_body(), 12), x.segment(index_b*dim_per_body(), 12));
-        //std::cout << G << std::endl;
+        //std::cout << "Singel body_beam: " <<  G_single_body_beam_n(bm, body_index, x.segment(index_a*dim_per_body(), 12), x.segment(index_b*dim_per_body(), 12)) << std::endl;
+        G.Block(constraint_counter, 0, bm.NumberOfConstraints()/2, 12) = G_single_body_beam_n(bm, body_index, x.segment(index_a*dim_per_body(), 12), x.segment(index_b*dim_per_body(), 12));
+        constraint_counter += bm.NumberOfConstraints()/2;
       }
 
       return G;
     }
 
-    /**
-    * @brief Computes the length constraint of a beam
-    *
-    * @param x The full position vector containing each position and momentum of each body
-    * @param beam_index The index of the beam to have the constraint calculated
-    * @return Value T of the length difference
-    */
-    template<typename T>
-    T Constraint(const VectorView<T> x, size_t beam_index)
-    {
-      Beam& bm = this->beams_[beam_index];
-      size_t bd_index_a = bm.BodyIndexA();
-      size_t bd_index_b = bm.BodyIndexB();
-      Vec<3, T> pos1 = bm.ConnectorA().RefPosition();
-      Vec<3, T> pos2 = bm.ConnectorB().RefPosition();
-      Vector<T> q = bm.PositionA( x.segment(bd_index_a*dim_per_body(), 12) ) - bm.PositionB( x.segment(bd_index_b*dim_per_body(), 12) );
-      //Vector<T> q_n = x.segment(bd_index_a*dim_per_body(), 3) + ToMatrix(x.segment(bd_index_a*dim_per_body() + 3, 9))*pos1 - x.segment(bd_index_b*dim_per_body(), 3) - ToMatrix(x.segment(bd_index_b*dim_per_body() + 3, 9))*pos2;
-      //std::cout << "q_n: " << q_n << std::endl;
-      //std::cout << "q: " << q << std::endl;
-      //std::cout << "pos1: " << pos1 << std::endl;
-      //std::cout << "pos2: " << pos2 << std::endl;
-      T g; // One constraint for a simple pendulum
-      g = q.squaredNorm() - bm.Length()*bm.Length(); // Length of beam constraint
-      return g;
-    }
-    
-    /**
-    * @brief Computes the derivative of a beam length constrain with respect to a specific body.
-    *
-    * @param bm The Beam of which you want to have the derivative of the constraint
-    * @param bd_index The index of the body to derive after
-    * @param q_a The 12-dimesnional vector representing the body position of body A of the beam
-    * @param q_b The 12-dimesnional vector representing the body position of body B of
-    * @return 12-dimesional gradient
-    */
-    template<typename T>
-    Vector<T> G_single_body_beam(Beam& bm, size_t bd_index, VectorView<T> q_a, VectorView<T> q_b) {
-    
-      Vector<T> res(dim_per_motion());
-
-      Vec<3, T> pos1 = bm.ConnectorA().RefPosition();
-      Vec<3, T> pos2 = bm.ConnectorB().RefPosition();
-
-      // if a is a fix
-      if (bm.ConnectorA().Fix())  {
-        for (size_t i = 0; i < 3; i++)  {
-          T row = 2*(pos1(i) - q_b.Range(3 + i*3, 3 + i*3 + 3)*pos2 - q_b(i));
-
-          res(i) = (-1)*row;
-
-          for (size_t j = 0; j < 3; j ++)
-          {
-            res(3 + i*3 + j) =  (-1)*pos2(j)*row;
-          }
-        }
-      }
-      //if b is a fix
-      else if (bm.ConnectorB().Fix())  {
-        for (size_t i = 0; i < 3; i++)  {
-          T row = 2*(q_a.Range(3 + i*3, 3 + i*3 + 3)*pos1 + q_a(i) - pos2(i));
-
-          res(i) = row;
-          res(dim_per_motion() + i) = 0;
-
-          for (size_t j = 0; j < 3; j ++) {
-            res(3 + i*3 + j) = pos1(j)*row;
-          }
-        }
-      }
-      else {
-        // check for index to take derivative after - case that it is a
-        if (bd_index == bm.ConnectorA().BodyIndex())
-        {
-          for (size_t i = 0; i < 3; i++)  {
-            T row = 2*(q_a.Range(3 + i*3, 3 + i*3 + 3)*pos1 + q_a(i) - q_b.Range(3 + i*3, 3 + i*3 + 3)*pos2 - q_b(i));
-
-            res(i) = row;
-
-            for (size_t j = 0; j < 3; j ++) {
-              res(3 + i*3 + j) = pos1(j)*row;
-            }
-          }
-        }
-        // case that it is b
-        else
-        {
-          for (size_t i = 0; i < 3; i++)  {
-            T row = 2*(q_a.Range(3 + i*3, 3 + i*3 + 3)*pos1 + q_a(i) - q_b.Range(3 + i*3, 3 + i*3 + 3)*pos2 - q_b(i));
-
-            res(i) = (-1)*row;
-
-            for (size_t j = 0; j < 3; j ++) {
-              res(3 + i*3 + j) = (-1)*pos2(j)*row;
-            }
-          }
-        }
-      }
-      return res;
-    }
-
 
     /**
     * @brief Computes the derivative of a beam length constrain with respect to a specific body.
@@ -179,9 +95,9 @@ class RigidBodySystem {
     * @return 12-dimesional gradient
     */
     template<typename T>
-    Vector<T> G_single_body_beam_n(Beam& bm, size_t bd_index, VectorView<T> q_a, VectorView<T> q_b) {
+    Matrix<T> G_single_body_beam_n(Beam& bm, size_t bd_index, VectorView<T> q_a, VectorView<T> q_b) {
     
-      Vector<T> res(dim_per_motion());
+      Matrix<T> res(bm.NumberOfConstraints()/2 , dim_per_motion());
 
       Vec<3, T> pos1 = bm.ConnectorA().RefPosition();
       Vec<3, T> pos2 = bm.ConnectorB().RefPosition();
@@ -189,7 +105,7 @@ class RigidBodySystem {
       Vector<AutoDiff<12, T>> q_a_diff = q_a;
       Vector<AutoDiff<12, T>> q_b_diff = q_b;
 
-      if ((bd_index == bm.BodyIndexA()) && !(bm.ConnectorA().Fix())) {
+      if ((bd_index == bm.BodyIndexA()) && !(bm.ConnectorA().Type() == ConnectorType::FIX)) {
         for(size_t i =0 ; i < 12; i++){
           q_a_diff(i).DValue(i) = 1;
         }
@@ -198,15 +114,14 @@ class RigidBodySystem {
           q_b_diff(i).DValue(i) = 1;
         }
       }
-      //Vector<AutoDiff<12, T>> q = q_a_diff.segment(0, 3) + ToMatrix(q_a_diff.segment(3, 9))*pos1 - q_b_diff.segment(0, 3) - ToMatrix(q_b_diff.segment(3, 9))*pos2;
-      Vector<AutoDiff<12, T>> q = bm.PositionA(q_a_diff) - bm.PositionB(q_b_diff);
-      
-      AutoDiff<12, T> g = q*q - bm.Length()*bm.Length(); // Length of beam constraint
-      Vector<T> g_vec(12);
-      for(size_t i = 0 ; i < 12; i++){
-        g_vec(i) = g.DValue(i);
+
+      Vector<AutoDiff<12, T>> g_vec = bm.Constraint(q_a_diff, q_b_diff);
+      for (size_t j = 0; j < res.Height(); j++) {
+        for(size_t i = 0 ; i < 12; i++){
+          res(j, i) = g_vec(j).DValue(i);
+        }
       }
-      return g_vec;
+      return res;
     }
 
 
@@ -218,38 +133,38 @@ class RigidBodySystem {
     * @return T value of the constraint
     */
     template<typename T>
-    T Velocity_Constraint(const VectorView<T> x, size_t beam_index)
-    {
-    Vector<T> G_a(12); // Jacobian for one constraint and three translational coordinates
-    Vector<T> G_b(12);
+    Vector<T> Velocity_Constraint(const VectorView<T> x, size_t beam_index)
+    { 
+      Beam& bm = this->beams_[beam_index];
+      Matrix<T> G_a(bm.NumberOfConstraints()/2 , dim_per_motion()); // Jacobian for one constraint and three translational coordinates
+      Matrix<T> G_b(bm.NumberOfConstraints()/2 , dim_per_motion());
 
-    G_a.setConstant(0);
-    G_b.setConstant(0);
+      G_a.setConstant(0);
+      G_b.setConstant(0);
 
-    Beam& bm = this->beams_[beam_index];
+      size_t bd_index_a = bm.BodyIndexA();
+      size_t bd_index_b = bm.BodyIndexB();
 
-    size_t bd_index_a = bm.BodyIndexA();
-    size_t bd_index_b = bm.BodyIndexB();
+      G_a += G_single_body_beam_n(bm, bd_index_a, x.segment(bd_index_a*dim_per_body(), 12), x.segment(bd_index_b*dim_per_body(), 12));
+      G_b += G_single_body_beam_n(bm, bd_index_b, x.segment(bd_index_a*dim_per_body(), 12), x.segment(bd_index_b*dim_per_body(), 12));
+      
+      Matrix<T> R_a = ToMatrix(x.segment(bd_index_a * dim_per_body() + 3, 9)) * vectorToSkewSymmetric( x.segment(bd_index_a * dim_per_body() + 18 + 3, 3) );
+      Matrix<T> R_b = ToMatrix(x.segment(bd_index_b * dim_per_body() + 3, 9)) * vectorToSkewSymmetric( x.segment(bd_index_b * dim_per_body() + 18 + 3, 3) );
 
-    G_a += G_single_body_beam_n(bm, bd_index_a, x.segment(bd_index_a*dim_per_body(), 12), x.segment(bd_index_b*dim_per_body(), 12));
-    G_b += G_single_body_beam_n(bm, bd_index_b, x.segment(bd_index_a*dim_per_body(), 12), x.segment(bd_index_b*dim_per_body(), 12));
-    
-    Matrix<T> R_a = ToMatrix(x.segment(bd_index_a * dim_per_body() + 3, 9)) * vectorToSkewSymmetric( x.segment(bd_index_a * dim_per_body() + 18 + 3, 3) ) ;
-    Matrix<T> R_b = ToMatrix(x.segment(bd_index_b * dim_per_body() + 3, 9)) * vectorToSkewSymmetric( x.segment(bd_index_b * dim_per_body() + 18 + 3, 3) ) ;
-     
+      Vector<T> c_a = G_a.Cols(0, 3)*x.segment(bd_index_a * dim_per_body() + 18, 3) + 
+                    G_a.Cols(3, 9) * ToVector(R_a);
 
-    T c_a = G_a.segment(0, 3)*x.segment(bd_index_a * dim_per_body() + 18, 3) + 
-                  G_a.segment(3, 9) * ToVector(R_a);
+      Vector<T> c_b = G_b.Cols(0, 3)*x.segment(bd_index_b * dim_per_body() + 18, 3) + 
+                    G_b.Cols(3, 9)*ToVector(R_b);
 
-    T c_b = G_b.segment(0, 3)*x.segment(bd_index_b * dim_per_body() + 18, 3) + 
-                  G_b.segment(3, 9)*ToVector(R_b);
-
-    return c_a + c_b;
-  }
+      return c_a + c_b;
+    }
 
     size_t& NumBeams();
     size_t& NumSprings();
-    size_t NumBodies();
+    size_t NumBodies() const;
+    size_t BodyDimensions() const;
+    size_t NumConstraints() const;
     
     RigidBody& Bodies(size_t i);
     Beam& Beams(size_t i);

@@ -3,38 +3,55 @@
 
 #include "../helper/helper.h"
 #include "vector.h"
+#include "rigid_body.h"
 
 using namespace ASC_bla;
 
+enum struct ConnectorType {
+    FIX,
+    FREE,
+    SPHERICAL
+};
+
 class Connector {
-    bool fix_;
+    ConnectorType type_;
     size_t body_index_;
     Vector<double> pos_ = {0,0,0};
+    Vector<double> initial_pos_ = {0,0,0};
+    Vector<double> initial_body_trans_ = {0,0,0};
+    Matrix<double> initial_body_rot_ = Matrix<double>(3,3);
 
 
    
   public:
     Connector() = default;
     Connector(Vector<double> pos);
-    Connector(Vector<double> pos, size_t body_index_);
+    Connector(Vector<double> pos, RigidBody& rb, ConnectorType type = ConnectorType::FREE);
 
     Connector(const Connector& other);
 
     size_t& BodyIndex();
-    bool& Fix();
+    ConnectorType& Type();
     
     template<typename T>
-    Vector<T> Position(const VectorView<T> q) {
-      if (this->fix_)
-      {
+    Vector<T> BodyFramePosition(const VectorView<T> q) {
+      return q.segment(0, 3) + ToMatrix(q.segment(3, 9))*(this->pos_);
+    }
+
+    template<typename T>
+    Vector<T> AbsPosition(const VectorView<T> q) {
+      if (this->type_ == ConnectorType::FIX) {
         return this->pos_;
       }
       return q.segment(0, 3) + ToMatrix(q.segment(3, 9))*(this->pos_);
     }
 
-    VectorView<double> RefPosition();
+    Vector<double> RefPosition();
 
     double RefPosition(size_t i);
+    Vector<double> InitialPosition();
+    Vector<double> InitialBodyTranslation();
+    Matrix<double> InitialBodyRotation();
 };
 
 #endif
