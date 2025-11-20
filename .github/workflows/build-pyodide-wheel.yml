@@ -39,7 +39,7 @@ jobs:
           ./emsdk activate 3.1.58
           popd
 
-            - name: Build pyodide wheel (with install + full logging)
+      - name: Build pyodide wheel (with install + full logging)
         shell: bash
         run: |
           # ensure basic system utilities, then add emsdk paths
