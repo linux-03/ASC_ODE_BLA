@@ -22,12 +22,18 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y cmake ninja-build git python3-venv build-essential
 
-      - name: Create venv & install build tools
+      - name: Create venv & install build tools (extra deps)
         run: |
           python3 -m venv .venv
           source .venv/bin/activate
           pip install --upgrade pip setuptools wheel
+          # scikit-build-core / cmake / ninja are required for CMake-based builds
           pip install scikit-build-core cmake ninja
+          # helpful extras often required to build packages from source
+          pip install build cython packaging pyyaml
+          # ensure pip can compile wheels if necessary
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libffi-dev
 
       - name: Install latest pyodide-build from GitHub
         run: |
