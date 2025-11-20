@@ -9,21 +9,27 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
-      - name: Install build deps
+      - name: Install system deps
         run: |
-          python -m venv .venv
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build git python3-venv build-essential
+
+      - name: Create venv & install build tools
+        run: |
+          python3 -m venv .venv
           source .venv/bin/activate
           pip install --upgrade pip setuptools wheel
           pip install scikit-build-core cmake ninja
 
-      - name: Install latest pyodide builder from GitHub
+      - name: Install latest pyodide-build from GitHub
         run: |
           source .venv/bin/activate
           pip uninstall -y pyodide-build pyodide pyodide-cli || true
@@ -45,7 +51,7 @@ jobs:
         run: |
           source ./emsdk/emsdk_env.sh
           source .venv/bin/activate
-          # use the modern CLI
+          # build the package in repo root; outputs end up in dist/
           pyodide build .
 
       - name: Upload wheels
