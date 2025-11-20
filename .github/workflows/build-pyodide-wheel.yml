@@ -39,7 +39,7 @@ jobs:
           ./emsdk activate 3.1.58
           popd
 
-      - name: Build pyodide wheel (with install + full logging)
+            - name: Build pyodide wheel (with install + full logging, use virtualenv)
         shell: bash
         run: |
           # ensure basic system utilities are available, then add emsdk paths
@@ -48,13 +48,13 @@ jobs:
           # initialize emsdk environment
           source ./emsdk/emsdk_env.sh
 
-          # create / activate venv (safe to run even if venv already exists)
-          python3 -m venv .venv
+          # use system python (actions/setup-python provided) to install virtualenv,
+          # then create the virtualenv via virtualenv (avoids ensurepip issues)
+          python3 -m pip install --upgrade pip setuptools wheel virtualenv
+          python3 -m virtualenv .venv
           source .venv/bin/activate
 
-          # IMPORTANT: (re)install pyodide-build into this same venv so the CLI script is present
-          # prefer installing latest builder from GitHub (modern CLI)
-          pip install --upgrade pip setuptools wheel
+          # IMPORTANT: (re)install pyodide-build into this same venv so the CLI is present
           pip uninstall -y pyodide-build pyodide pyodide-cli || true
           pip install "git+https://github.com/pyodide/pyodide-build.git@main"
 
