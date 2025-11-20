@@ -1,5 +1,5 @@
-find_package(Python REQUIRED COMPONENTS Interpreter Development)
-find_package(pybind11 CONFIG REQUIRED)
+#find_package(Python REQUIRED COMPONENTS Interpreter Development)
+#find_package(pybind11 CONFIG REQUIRED)
 
 list(APPEND CMAKE_PREFIX_PATH "${PYBIND11_DIR}")
 

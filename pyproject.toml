@@ -1,0 +1,8 @@
+[build-system]
+requires = [
+  "scikit-build-core>=0.14.0",
+  "setuptools>=61.0",
+  "wheel",
+  "pyodide-build>=0.29.0"
+]
+build-backend = "scikit_build_core.build_api"
