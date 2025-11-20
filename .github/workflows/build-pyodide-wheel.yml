@@ -39,42 +39,93 @@ jobs:
           ./emsdk activate 3.1.58
           popd
 
-      - name: Build pyodide wheel (with install + full logging)
+      - name: Build pyodide wheel (robust install + try multiple CLIs)
         shell: bash
         run: |
-          # ensure basic system utilities, then add emsdk paths
+          set -euxo pipefail
+
+          # ensure basic system utilities and emsdk path
           export PATH="/usr/bin:/bin:/usr/local/bin:$PWD/emsdk:$PWD/emsdk/upstream/emscripten:$PATH"
 
-          # initialize emsdk
+          # init emsdk
           source ./emsdk/emsdk_env.sh
 
-          # create / activate venv using virtualenv (avoid ensurepip bugs)
+          # create a virtualenv using virtualenv (avoid ensurepip problems)
           python3 -m pip install --upgrade pip setuptools wheel virtualenv
           python3 -m virtualenv .venv
           source .venv/bin/activate
 
-          # install modern pyodide builder from GitHub
+          # (re)install pyodide-build from GitHub main and show verbose output
           pip uninstall -y pyodide-build pyodide pyodide-cli || true
-          pip install "git+https://github.com/pyodide/pyodide-build.git@main"
+          # use -v so we see if installation fails
+          pip install -v "git+https://github.com/pyodide/pyodide-build.git@main" 2>&1 | tee pip-install.log
 
-          echo "Contents of .venv/bin:"
-          ls -la .venv/bin
+          echo "=== pip list (venv) ==="
+          pip list
 
-          echo "Checking for Pyodide build commands:"
-          ls -la .venv/bin | grep -E 'py|build|pypa' || true
+          echo "=== pip show pyodide-build ==="
+          pip show pyodide-build || true
+          pip show pypabuild || true
+          pip show pypa-build || true
 
-          # run the correct builder: pypa-build
+          echo "=== contents of .venv/bin ==="
+          ls -la .venv/bin || true
+
+          # try a set of candidate executables / module entrypoints in order
+          BUILDER_CMD=""
+          if [ -x ".venv/bin/pypabuild" ]; then
+            BUILDER_CMD=".venv/bin/pypabuild"
+          elif [ -x ".venv/bin/pypa-build" ]; then
+            BUILDER_CMD=".venv/bin/pypa-build"
+          elif [ -x ".venv/bin/pypa_build" ]; then
+            BUILDER_CMD=".venv/bin/pypa_build"
+          elif [ -x ".venv/bin/pyodide-build" ]; then
+            BUILDER_CMD=".venv/bin/pyodide-build"
+          elif python -c "import importlib,sys
+          try:
+              importlib.import_module('pypabuild')
+              sys.exit(0)
+          except Exception:
+              sys.exit(1)
+          " ; then
+                      BUILDER_CMD="python -m pypabuild"
+                    elif python -c "import importlib,sys
+          try:
+              importlib.import_module('pypa_build')
+              sys.exit(0)
+          except Exception:
+              sys.exit(1)
+          " ; then
+            BUILDER_CMD="python -m pypa_build"
+          fi
+
+          echo "Detected builder command: ${BUILDER_CMD:-<none>}"
+
+          if [ -z "$BUILDER_CMD" ]; then
+            echo "ERROR: No pyodide builder command found in venv. See pip-install.log above."
+            exit 2
+          fi
+
+          # run the detected builder and capture full logs
           set +e
-          .venv/bin/pypa-build . 2>&1 | tee pyodide-build.log
-          rc=${PIPESTATUS[0]}
+          if [[ "$BUILDER_CMD" == python* ]]; then
+            $BUILDER_CMD . 2>&1 | tee pyodide-build.log
+            rc=${PIPESTATUS[0]}
+          else
+            $BUILDER_CMD build . 2>&1 | tee pyodide-build.log
+            rc=${PIPESTATUS[0]}
+          fi
           set -e
 
+          echo "=== tail of build log ==="
           tail -n 200 pyodide-build.log || true
 
           if [ "$rc" -ne 0 ]; then
-            echo "pypa-build failed with exit code $rc"
+            echo "Builder failed with exit code $rc. Uploading logs (next step) ..."
             exit $rc
           fi
+
+
 
       - name: Upload pyodide build log
         if: failure() || always()
