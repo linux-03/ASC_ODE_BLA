@@ -30,11 +30,6 @@ jobs:
           pip install --upgrade pip setuptools wheel
           # CMake/CMake backend helper
           pip install scikit-build-core cmake ninja
-          # Tools often required when pip installs packages into isolated build envs
-          pip install build cython packaging pyyaml pybind11
-          # Also preinstall pyodide build tooling from GitHub main (modern builder)
-          pip uninstall -y pyodide-build pyodide pyodide-cli || true
-          pip install "git+https://github.com/pyodide/pyodide-build.git@main"
 
       - name: Install emsdk (use Emscripten 3.1.58 for Pyodide xbuildenv)
         run: |
