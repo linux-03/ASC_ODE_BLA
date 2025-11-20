@@ -39,40 +39,40 @@ jobs:
           ./emsdk activate 3.1.58
           popd
 
-      - name: Build pyodide wheel (with install + full logging, use virtualenv)
+            - name: Build pyodide wheel (with install + full logging)
         shell: bash
         run: |
-          # ensure basic system utilities are available, then add emsdk paths
+          # ensure basic system utilities, then add emsdk paths
           export PATH="/usr/bin:/bin:/usr/local/bin:$PWD/emsdk:$PWD/emsdk/upstream/emscripten:$PATH"
 
-          # initialize emsdk environment
+          # initialize emsdk
           source ./emsdk/emsdk_env.sh
 
-          # use system python (actions/setup-python provided) to install virtualenv,
-          # then create the virtualenv via virtualenv (avoids ensurepip issues)
+          # create / activate venv using virtualenv (avoid ensurepip bugs)
           python3 -m pip install --upgrade pip setuptools wheel virtualenv
           python3 -m virtualenv .venv
           source .venv/bin/activate
 
-          # IMPORTANT: (re)install pyodide-build into this same venv so the CLI is present
+          # install modern pyodide builder from GitHub
           pip uninstall -y pyodide-build pyodide pyodide-cli || true
           pip install "git+https://github.com/pyodide/pyodide-build.git@main"
 
-          # Debug: list .venv/bin to confirm presence of CLI
           echo "Contents of .venv/bin:"
-          ls -la .venv/bin || true
-          echo "pyodide-build path check:"
-          which pyodide-build || true
-          .venv/bin/pyodide-build --version || true
+          ls -la .venv/bin
 
-          # run the builder via the explicit venv binary to avoid PATH surprises
+          echo "Checking for Pyodide build commands:"
+          ls -la .venv/bin | grep -E 'py|build|pypa' || true
+
+          # run the correct builder: pypa-build
           set +e
-          .venv/bin/pyodide-build build . 2>&1 | tee pyodide-build.log
+          .venv/bin/pypa-build . 2>&1 | tee pyodide-build.log
           rc=${PIPESTATUS[0]}
           set -e
+
           tail -n 200 pyodide-build.log || true
+
           if [ "$rc" -ne 0 ]; then
-            echo "pyodide-build failed with exit code $rc (log uploaded by next step)"
+            echo "pypa-build failed with exit code $rc"
             exit $rc
           fi
 
