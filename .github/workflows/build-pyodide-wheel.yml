@@ -42,21 +42,20 @@ jobs:
       - name: Build pyodide wheel (with full logging)
         shell: bash
         run: |
-          # ensure basic system utilities are available, then add emsdk paths
           export PATH="/usr/bin:/bin:/usr/local/bin:$PWD/emsdk:$PWD/emsdk/upstream/emscripten:$PATH"
-          # initialize emsdk environment (sets EMSDK, EMCC, etc.)
           source ./emsdk/emsdk_env.sh
-          # activate the python venv prepared earlier
+          # activate venv
           source .venv/bin/activate
-          # run the build and capture stdout/stderr to a log file
-          set +e
-          pyodide-build build . 2>&1 | tee pyodide-build.log
+          # debug: list bin to show the installed CLI scripts (uploads log later)
+          echo "Contents of .venv/bin:"
+          ls -la .venv/bin || true
+
+          # call pyodide-build via explicit path to avoid PATH issues
+          .venv/bin/pyodide-build build . 2>&1 | tee pyodide-build.log
           rc=${PIPESTATUS[0]}
-          set -e
-          # show the tail for quick visibility
           tail -n 200 pyodide-build.log || true
           if [ "$rc" -ne 0 ]; then
-            echo "pyodide build failed with exit code $rc; log uploaded by next step as artifact"
+            echo "pyodide-build failed with exit code $rc"
             exit $rc
           fi
 
