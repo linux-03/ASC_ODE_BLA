@@ -12,7 +12,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Set up Python 3.12
         uses: actions/setup-python@v4
         with:
           python-version: '3.12'
@@ -20,24 +20,19 @@ jobs:
       - name: Install system deps
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build git python3-venv build-essential
+          # build essentials and common libs needed for compiling many Python packages
+          sudo apt-get install -y cmake ninja-build git python3-venv build-essential pkg-config libffi-dev libssl-dev
 
-      - name: Create venv & install build tools (extra deps)
+      - name: Create venv & preinstall build tools and common build deps
         run: |
           python3 -m venv .venv
           source .venv/bin/activate
           pip install --upgrade pip setuptools wheel
-          # scikit-build-core / cmake / ninja are required for CMake-based builds
+          # CMake/CMake backend helper
           pip install scikit-build-core cmake ninja
-          # helpful extras often required to build packages from source
-          pip install build cython packaging pyyaml
-          # ensure pip can compile wheels if necessary
-          sudo apt-get update
-          sudo apt-get install -y build-essential pkg-config libffi-dev
-
-      - name: Install latest pyodide-build from GitHub
-        run: |
-          source .venv/bin/activate
+          # Tools often required when pip installs packages into isolated build envs
+          pip install build cython packaging pyyaml pybind11
+          # Also preinstall pyodide build tooling from GitHub main (modern builder)
           pip uninstall -y pyodide-build pyodide pyodide-cli || true
           pip install "git+https://github.com/pyodide/pyodide-build.git@main"
 
@@ -45,24 +40,40 @@ jobs:
         run: |
           git clone https://github.com/emscripten-core/emsdk.git emsdk
           pushd emsdk
-          # Install the Emscripten version required by the Pyodide xbuild environment
           ./emsdk install 3.1.58
           ./emsdk activate 3.1.58
           popd
 
-      - name: Build pyodide wheel
+      - name: Build pyodide wheel (with full logging)
         shell: bash
         run: |
           # ensure basic system utilities are available, then add emsdk paths
           export PATH="/usr/bin:/bin:/usr/local/bin:$PWD/emsdk:$PWD/emsdk/upstream/emscripten:$PATH"
-          # initialize emsdk environment (this will still set additional vars)
+          # initialize emsdk environment (sets EMSDK, EMCC, etc.)
           source ./emsdk/emsdk_env.sh
-          # activate the python venv
+          # activate the python venv prepared earlier
           source .venv/bin/activate
-          # build the package in repo root; outputs end up in dist/
-          pyodide build .
+          # run the build and capture stdout/stderr to a log file
+          set +e
+          pyodide build . 2>&1 | tee pyodide-build.log
+          rc=${PIPESTATUS[0]}
+          set -e
+          # show the tail for quick visibility
+          tail -n 200 pyodide-build.log || true
+          if [ "$rc" -ne 0 ]; then
+            echo "pyodide build failed with exit code $rc; log uploaded by next step as artifact"
+            exit $rc
+          fi
 
-      - name: Upload wheels
+      - name: Upload pyodide build log
+        if: failure() || always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pyodide-build-log
+          path: pyodide-build.log
+
+      - name: Upload wheels (if any)
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: pyodide-wheels
