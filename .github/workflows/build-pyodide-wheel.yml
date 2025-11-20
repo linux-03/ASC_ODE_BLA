@@ -50,7 +50,7 @@ jobs:
           source .venv/bin/activate
           # run the build and capture stdout/stderr to a log file
           set +e
-          pyodide build . 2>&1 | tee pyodide-build.log
+          pyodide-build build . 2>&1 | tee pyodide-build.log
           rc=${PIPESTATUS[0]}
           set -e
           # show the tail for quick visibility
