@@ -45,10 +45,12 @@ jobs:
 
       - name: Build pyodide wheel
         shell: bash
-        env:
-          PATH: ${{ github.workspace }}/emsdk/upstream/emscripten:${{ env.PATH }}
         run: |
+          # ensure basic system utilities are available, then add emsdk paths
+          export PATH="/usr/bin:/bin:/usr/local/bin:$PWD/emsdk:$PWD/emsdk/upstream/emscripten:$PATH"
+          # initialize emsdk environment (this will still set additional vars)
           source ./emsdk/emsdk_env.sh
+          # activate the python venv
           source .venv/bin/activate
           # build the package in repo root; outputs end up in dist/
           pyodide build .
