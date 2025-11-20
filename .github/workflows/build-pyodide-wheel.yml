@@ -41,7 +41,6 @@ jobs:
           pushd emsdk
           ./emsdk install latest
           ./emsdk activate latest
-          echo "source $PWD/emsdk_env.sh" >> $GITHUB_ENV
           popd
 
       - name: Build pyodide wheel
