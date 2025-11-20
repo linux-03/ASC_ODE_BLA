@@ -39,23 +39,40 @@ jobs:
           ./emsdk activate 3.1.58
           popd
 
-      - name: Build pyodide wheel (with full logging)
+      - name: Build pyodide wheel (with install + full logging)
         shell: bash
         run: |
+          # ensure basic system utilities are available, then add emsdk paths
           export PATH="/usr/bin:/bin:/usr/local/bin:$PWD/emsdk:$PWD/emsdk/upstream/emscripten:$PATH"
+
+          # initialize emsdk environment
           source ./emsdk/emsdk_env.sh
-          # activate venv
+
+          # create / activate venv (safe to run even if venv already exists)
+          python3 -m venv .venv
           source .venv/bin/activate
-          # debug: list bin to show the installed CLI scripts (uploads log later)
+
+          # IMPORTANT: (re)install pyodide-build into this same venv so the CLI script is present
+          # prefer installing latest builder from GitHub (modern CLI)
+          pip install --upgrade pip setuptools wheel
+          pip uninstall -y pyodide-build pyodide pyodide-cli || true
+          pip install "git+https://github.com/pyodide/pyodide-build.git@main"
+
+          # Debug: list .venv/bin to confirm presence of CLI
           echo "Contents of .venv/bin:"
           ls -la .venv/bin || true
+          echo "pyodide-build path check:"
+          which pyodide-build || true
+          .venv/bin/pyodide-build --version || true
 
-          # call pyodide-build via explicit path to avoid PATH issues
+          # run the builder via the explicit venv binary to avoid PATH surprises
+          set +e
           .venv/bin/pyodide-build build . 2>&1 | tee pyodide-build.log
           rc=${PIPESTATUS[0]}
+          set -e
           tail -n 200 pyodide-build.log || true
           if [ "$rc" -ne 0 ]; then
-            echo "pyodide-build failed with exit code $rc"
+            echo "pyodide-build failed with exit code $rc (log uploaded by next step)"
             exit $rc
           fi
 
