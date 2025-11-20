@@ -35,12 +35,13 @@ jobs:
           pip uninstall -y pyodide-build pyodide pyodide-cli || true
           pip install "git+https://github.com/pyodide/pyodide-build.git@main"
 
-      - name: Install emsdk
+      - name: Install emsdk (use Emscripten 3.1.58 for Pyodide xbuildenv)
         run: |
           git clone https://github.com/emscripten-core/emsdk.git emsdk
           pushd emsdk
-          ./emsdk install latest
-          ./emsdk activate latest
+          # Install the Emscripten version required by the Pyodide xbuild environment
+          ./emsdk install 3.1.58
+          ./emsdk activate 3.1.58
           popd
 
       - name: Build pyodide wheel
