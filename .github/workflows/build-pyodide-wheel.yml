@@ -1,4 +1,4 @@
-name: Build Pyodide + Jupyter-Lite and deploy
+name: Build Pyodide wheel, build Jupyter-Lite site, deploy to GitHub Pages
 
 on:
   push:
@@ -12,95 +12,107 @@ permissions:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 180
+
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install system deps
+      - name: Install system packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y git wget build-essential cmake python3-venv nodejs
+          sudo apt-get install -y git wget build-essential cmake ninja-build python3-venv nodejs unzip
+        shell: bash
 
-      - name: Set up Python venv
+      - name: Create Python venv and install Python build tools
         run: |
+          set -eux
           python3 -m venv ~/pyodide-venv
           source ~/pyodide-venv/bin/activate
           pip install --upgrade pip
-          pip install pyodide-build==0.26.1 scikit-build-core cmake pybind11 wheel
-          pip install jupyterlite-core
-          
-          pip install jupyterlite-pyodide-kernel
-      
+          # essential build deps for scikit-build-core, pybind11 etc.
+          pip install wheel scikit-build-core cmake pybind11 ninja
+          # pyodide build tool (version must match your expected pyodide version)
+          pip install pyodide-build==0.26.1
+          # jupyter-lite core (to run jupyter lite build) and pyodide kernel helper
+          pip install jupyterlite-core jupyterlite-pyodide-kernel
+        shell: bash
 
-      - name: Install emsdk
-        shell: bash -l {0}
+      - name: Install Emscripten SDK (emsdk)
         run: |
+          set -eux
+          # clone emsdk into runner home
           git clone https://github.com/emscripten-core/emsdk.git ~/emsdk
           cd ~/emsdk
           ./emsdk install 3.1.58
           ./emsdk activate 3.1.58
-        # note: emsdk env needs to be sourced in later steps before using emcc
-
-      - name: Debug PATH and dirname
-        run: |
-          echo "SHELL: $SHELL"
-          echo "PATH: $PATH"
-          which dirname || (echo "dirname not found"; ls -l /usr/bin/dirname || true)
-          type dirname || true
         shell: bash
 
-      - name: Build project for Pyodide
+      - name: Source emsdk, build Pyodide wheel from project root
+        # use a login shell so 'source' works and PATH is sane
         shell: bash -l {0}
         run: |
           set -eux
 
-          echo "Initial PATH: $PATH"
-          echo "GITHUB_WORKSPACE: ${GITHUB_WORKSPACE:-$(pwd)}"
-
-          # go into emsdk directory and source emsdk_env.sh (recommended)
+          echo "GITHUB_WORKSPACE=${GITHUB_WORKSPACE:-/github/workspace}"
+          # source emsdk from inside its directory (emsdk recommends this)
           cd ~/emsdk
-          echo "Sourcing emsdk from: $(pwd)"
+          echo "Sourcing emsdk from $(pwd)"
           source ./emsdk_env.sh
 
-          # go back to the repo root where pyproject.toml lives
+          # go back to repo root (where your pyproject.toml should be)
           cd "${GITHUB_WORKSPACE:-/github/workspace}"
-          echo "Now in project dir: $(pwd)"
-          echo "Listing project files:"
+          echo "Building from project dir: $(pwd)"
           ls -la | sed -n '1,200p'
 
-          # activate the pyodide venv we created earlier
+          # Activate pyodide venv
           source ~/pyodide-venv/bin/activate
-          echo "Python from venv: $(which python) ; pyodide CLI: $(which pyodide || true)"
+          echo "python: $(which python)  pyodide: $(which pyodide || true)"
 
-          # optional sanity: ensure pyodide-build is installed in the venv
-          python -m pip show pyodide-build || python -m pip install pyodide-build==0.26.1
+          # Prevent pybind11 / CMake from trying to validate host Python vs cross-compiler
+          # This avoids the "Python is 64-bit, chosen compiler is 32-bit" error during cross-build.
+          export CMAKE_ARGS="-DPYBIND11_FINDPYTHON=OFF -DPYBIND11_FINDPYTHON_EXECUTABLE:STRING=$(which python)"
+          echo "CMAKE_ARGS=$CMAKE_ARGS"
 
-          # build the pyodide wheel (this will download xbuildenv if needed)
+          # Optional sanity: run native pip install . to ensure packaging works (uncomment if desired)
+          # pip install . || true
+
+          # Build the Pyodide wheel (may download xbuildenv; can be slow first time)
           pyodide build
 
-          # show the produced artifacts
+          # show generated artifacts
+          ls -la dist || true
+      - name: Prepare Jupyter-Lite site and copy pyodide artifacts
+        shell: bash
+        run: |
+          set -eux
+          # Where to put the assembled site (temp dir)
+          SITE_TMP=/tmp/rigid_body_interactive
+          rm -rf "${SITE_TMP}"
+          git clone https://github.com/triadtitans/rigid_body_interactive.git "${SITE_TMP}"
+
+          # Ensure static pyodide dir exists and copy our pyodide wheel artifacts in
+          mkdir -p "${SITE_TMP}/dist/static/pyodide"
+          # copy the pyodide-built files (adjust path if your build emits elsewhere)
+          cp -r ./dist/* "${SITE_TMP}/dist/static/pyodide/" || true
+
+          # list what we copied for debugging
+          echo "Copied files:"
+          ls -la "${SITE_TMP}/dist/static/pyodide" || true
+
+      - name: Build Jupyter-Lite site (bundles pyodide)
+        shell: bash -l {0}
+        run: |
+          set -eux
+          source ~/pyodide-venv/bin/activate
+
+          SITE_TMP=/tmp/rigid_body_interactive
+          cd "${SITE_TMP}"
+          # The --pyodide option can point to a tarball URL (or omit if included)
+          jupyter lite build --pyodide https://ngsolve.org/files/pyodide-0.26.0/ngsolve_pyodide.tar.bz2
           ls -la dist || true
 
-
-      - name: Verify wheel
-        run: |
-          source ~/pyodide-venv/bin/activate
-          pip install dist/*.whl --force-reinstall || true
-          python3 -c "print('ok')"
-
-      - name: Build jupyter-lite site
-        run: |
-          source ~/pyodide-venv/bin/activate
-          # clone site if it's in a different repo, otherwise run in repo
-          git clone https://github.com/triadtitans/rigid_body_interactive.git /tmp/rigid_body_interactive
-          # copy pyodide artifacts into site static folder
-          mkdir -p /tmp/rigid_body_interactive/dist/static/pyodide
-          cp -r dist/* /tmp/rigid_body_interactive/dist/static/pyodide/
-          cd /tmp/rigid_body_interactive
-          jupyter lite build --pyodide https://ngsolve.org/files/pyodide-0.26.0/ngsolve_pyodide.tar.bz2
-          ls -la dist
-
-      - name: Deploy to GitHub Pages
+      - name: Deploy site to GitHub Pages (gh-pages)
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
