@@ -4,8 +4,7 @@
 add_library(helper STATIC helper.cc)
 
 # Specify include directories for helper
-target_include_directories(helper PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}) # helper's own headers
-    #${CMAKE_SOURCE_DIR}/bla      # bla's headers
+target_include_directories(helper PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_SOURCE_DIR}/bla)     # bla's headers
 
 
 # Link the bla library
