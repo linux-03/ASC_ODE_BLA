@@ -26,7 +26,10 @@ jobs:
           python3 -m venv ~/pyodide-venv
           source ~/pyodide-venv/bin/activate
           pip install --upgrade pip
-          pip install pyodide-build==0.26.1 scikit-build-core cmake pybind11 wheel "jupyter-lite[build]"
+          pip install pyodide-build==0.26.1 scikit-build-core cmake pybind11 wheel
+          pip install jupyterlite-core
+          
+          pip install jupyterlite-pyodide-kernel
 
       - name: Install emsdk
         run: |
