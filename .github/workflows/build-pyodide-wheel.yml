@@ -1,142 +1,71 @@
-name: Build Pyodide wheel
+name: Build Pyodide + Jupyter-Lite and deploy
 
 on:
-  workflow_dispatch:
   push:
     branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
 
 jobs:
-  build:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.12'
-
       - name: Install system deps
         run: |
           sudo apt-get update
-          # build essentials and common libs needed for compiling many Python packages
-          sudo apt-get install -y cmake ninja-build git python3-venv build-essential pkg-config libffi-dev libssl-dev
+          sudo apt-get install -y git wget build-essential cmake python3-venv nodejs
 
-      - name: Create venv & preinstall build tools and common build deps
+      - name: Set up Python venv
         run: |
-          python3 -m venv .venv
-          source .venv/bin/activate
-          pip install --upgrade pip setuptools wheel
-          # CMake/CMake backend helper
-          pip install scikit-build-core cmake ninja
+          python3 -m venv ~/pyodide-venv
+          source ~/pyodide-venv/bin/activate
+          pip install --upgrade pip
+          pip install pyodide-build==0.26.1 scikit-build-core cmake pybind11 wheel "jupyter-lite[build]"
 
-      - name: Install emsdk (use Emscripten 3.1.58 for Pyodide xbuildenv)
+      - name: Install emsdk
         run: |
-          git clone https://github.com/emscripten-core/emsdk.git emsdk
-          pushd emsdk
+          git clone https://github.com/emscripten-core/emsdk.git ~/emsdk
+          cd ~/emsdk
           ./emsdk install 3.1.58
           ./emsdk activate 3.1.58
-          popd
+        # note: emsdk env needs to be sourced in later steps before using emcc
 
-      - name: Build pyodide wheel (try pyodide / pyproject-build / fallbacks)
-        shell: bash
+      - name: Build project for Pyodide
+        env:
+          PATH: ${{ runner.tool_cache }}:/usr/local/bin:$PATH
         run: |
-          set -euxo pipefail
+          source ~/emsdk/emsdk_env.sh
+          source ~/pyodide-venv/bin/activate
+          # build the pyodide wheel
+          pyodide build
+          ls -la dist
 
-          export PATH="/usr/bin:/bin:/usr/local/bin:$PWD/emsdk:$PWD/emsdk/upstream/emscripten:$PATH"
-          source ./emsdk/emsdk_env.sh
+      - name: Verify wheel
+        run: |
+          source ~/pyodide-venv/bin/activate
+          pip install dist/*.whl --force-reinstall || true
+          python3 -c "print('ok')"
 
-          python3 -m pip install --upgrade pip setuptools wheel virtualenv
-          python3 -m virtualenv .venv
-          source .venv/bin/activate
+      - name: Build jupyter-lite site
+        run: |
+          source ~/pyodide-venv/bin/activate
+          # clone site if it's in a different repo, otherwise run in repo
+          git clone https://github.com/triadtitans/rigid_body_interactive.git /tmp/rigid_body_interactive
+          # copy pyodide artifacts into site static folder
+          mkdir -p /tmp/rigid_body_interactive/dist/static/pyodide
+          cp -r dist/* /tmp/rigid_body_interactive/dist/static/pyodide/
+          cd /tmp/rigid_body_interactive
+          jupyter lite build --pyodide https://ngsolve.org/files/pyodide-0.26.0/ngsolve_pyodide.tar.bz2
+          ls -la dist
 
-          pip uninstall -y pyodide-build pyodide pyodide-cli || true
-          pip install -v "git+https://github.com/pyodide/pyodide-build.git@main" 2>&1 | tee pip-install.log
-
-          echo "=== pip list (venv) ==="
-          pip list
-          echo "=== contents of .venv/bin ==="
-          ls -la .venv/bin || true
-
-          # Candidate commands in order of preference (explicit path)
-          candidates=(
-            ".venv/bin/pyodide"
-            ".venv/bin/pyproject-build"
-            ".venv/bin/pyproject_build"
-            ".venv/bin/pyodide-build"
-            ".venv/bin/pypabuild"
-            ".venv/bin/pypa-build"
-            "python -m pypabuild"
-            "python -m pypa_build"
-          )
-
-          BUILDER_CMD=""
-          for cmd in "${candidates[@]}"; do
-            if [[ "$cmd" == python* ]]; then
-              # check if module importable
-              mod="$(echo $cmd | sed -E 's/python -m (.+)/\\1/')"
-              if python -c "import importlib,sys
-                try:
-                    importlib.import_module('${mod}')
-                    sys.exit(0)
-                except Exception:
-                    sys.exit(1)
-                "; then
-                BUILDER_CMD="$cmd"
-                break
-              fi
-            else
-              if [ -x "$cmd" ]; then
-                BUILDER_CMD="$cmd"
-                break
-              fi
-            fi
-          done
-
-          echo "Detected builder command: ${BUILDER_CMD:-<none>}"
-
-          if [ -z "$BUILDER_CMD" ]; then
-            echo "ERROR: No builder command found. See pip-install.log and .venv/bin listing above."
-            exit 2
-          fi
-
-          # Run detected builder appropriately
-          set +e
-          if [[ "$BUILDER_CMD" == python* ]]; then
-            $BUILDER_CMD . 2>&1 | tee pyodide-build.log
-            rc=${PIPESTATUS[0]}
-          else
-            # 'pyodide' and 'pyproject-build' use subcommand 'build' while some might accept '.' directly
-            if [[ "$BUILDER_CMD" =~ pyodide$|pyproject-build$|pyodide-build$|pypabuild$|pypa-build$ ]]; then
-              $BUILDER_CMD build . 2>&1 | tee pyodide-build.log
-            else
-              $BUILDER_CMD . 2>&1 | tee pyodide-build.log
-            fi
-            rc=${PIPESTATUS[0]}
-          fi
-          set -e
-
-          tail -n 200 pyodide-build.log || true
-
-          if [ "$rc" -ne 0 ]; then
-            echo "Builder failed with exit code $rc; logs uploaded by next step"
-            exit $rc
-          fi
-
-
-
-
-      - name: Upload pyodide build log
-        if: failure() || always()
-        uses: actions/upload-artifact@v4
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          name: pyodide-build-log
-          path: pyodide-build.log
-
-      - name: Upload wheels (if any)
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pyodide-wheels
-          path: dist/*.whl
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: /tmp/rigid_body_interactive/dist

@@ -1,21 +1,21 @@
+# Compilation:
+#   install pyodide-build==0.26.0
+#   make a pyodide virtual environment
+#   (test build using pip)
+#   "pyodide build"
+
 [build-system]
-requires = [
-  "scikit-build-core>=0.14.0",
-  "setuptools>=61.0",
-  "wheel",
-  "pybind11",
-]
-build-backend = "scikit_build_core.build_api"
+requires = ["scikit-build-core>=0.3.3", "pybind11"]
+build-backend = "scikit_build_core.build"
+
 
 [project]
-name = "asc_ode_bla"
-version = "0.1.0"
-description = "ASC ODE BLA pybind11 C++ extension"
-requires-python = ">=3.8"
+name = "lib_rigid_body"
+version="0.0.1"
+description="rigid body mechanics implementation"
+authors = [
+  { name = "J. Schöberl, T. Leichtfried, L. Gauler, N. Hammer" },
+]
 
-[tool.scikit-build-core]
-cmake.minimum-version = "3.18"
-build-dir = "build-dir"
-wheel.packages = []
-wheel.py-api = "cp312"
-minimum-version = "0.14"
+[tool.scikit-build]
+wheel.expand-macos-universal-tags = true
