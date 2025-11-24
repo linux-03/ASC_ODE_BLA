@@ -24,79 +24,110 @@ jobs:
           sudo apt-get install -y git wget build-essential cmake ninja-build python3-venv nodejs unzip
         shell: bash
 
-      - name: Create Python venv and install Python build tools
+      - name: Create Python venv and install build tooling
         run: |
           set -eux
           python3 -m venv ~/pyodide-venv
           source ~/pyodide-venv/bin/activate
           pip install --upgrade pip
-          # essential build deps for scikit-build-core, pybind11 etc.
           pip install wheel scikit-build-core cmake pybind11 ninja
-          # pyodide build tool (version must match your expected pyodide version)
           pip install pyodide-build==0.26.1
-          # jupyter-lite core (to run jupyter lite build) and pyodide kernel helper
           pip install jupyterlite-core jupyterlite-pyodide-kernel
         shell: bash
 
       - name: Install Emscripten SDK (emsdk)
         run: |
           set -eux
-          # clone emsdk into runner home
           git clone https://github.com/emscripten-core/emsdk.git ~/emsdk
           cd ~/emsdk
           ./emsdk install 3.1.58
           ./emsdk activate 3.1.58
         shell: bash
 
-      - name: Source emsdk, build Pyodide wheel from project root
-        # use a login shell so 'source' works and PATH is sane
+      - name: Patch CMakeLists.txt to disable PYBIND11_FINDPYTHON for Emscripten cross-builds
+        # This inserts a tiny guard right after cmake_minimum_required(...) so pybind11 won't do host-Python ABI checks
+        run: |
+          set -eux
+          CMK="CMakeLists.txt"
+          if [ -f "$CMK" ]; then
+            echo "Patching $CMK (inserting PYBIND11_FINDPYTHON OFF guard)..."
+            cp "$CMK" "${CMK}.ci.bak"
+            # Insert after the cmake_minimum_required(...) line.
+            # If cmake_minimum_required exists, put the guard after it; otherwise prepend.
+            if grep -q -E "cmake_minimum_required" "$CMK"; then
+              awk '{
+                print;
+                if(!done && match($0,/cmake_minimum_required/)) {
+                  print "";
+                  print "# --- CI-inserted: disable pybind11 Python probing when cross-compiling to Emscripten ---";
+                  print "if(CMAKE_SYSTEM_NAME STREQUAL \"Emscripten\" OR CMAKE_CROSSCOMPILING)";
+                  print "  message(STATUS \"CI: cross-compiling -> disable PYBIND11_FINDPYTHON\")";
+                  print "  set(PYBIND11_FINDPYTHON OFF CACHE BOOL \"CI: do not find host python when cross-compiling\")";
+                  print "endif()";
+                  print "# --- end CI insertion ---";
+                  done=1;
+                }
+              } END { if(!done) { print \"# --- CI-inserted fallback: disable pybind11 Python probing\"; print \"if(CMAKE_SYSTEM_NAME STREQUAL \\\"Emscripten\\\" OR CMAKE_CROSSCOMPILING)\"; print \"  set(PYBIND11_FINDPYTHON OFF CACHE BOOL \\\"CI: do not find host python when cross-compiling\\\")\"; print \"endif()\" } }' "${CMK}.ci.bak" > "$CMK"
+            else
+              # no cmake_minimum_required found: prepend guard
+              cat > "$CMK.tmp" <<'EOF'
+              # --- CI-inserted guard: disable pybind11 python probing for cross-compiles ---
+              if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten" OR CMAKE_CROSSCOMPILING)
+                message(STATUS "CI: cross-compiling -> disable PYBIND11_FINDPYTHON")
+                set(PYBIND11_FINDPYTHON OFF CACHE BOOL "CI: do not find host python when cross-compiling")
+              endif()
+              # --- end guard ---
+              EOF
+              cat "$CMK" >> "$CMK.tmp"
+              mv "$CMK.tmp" "$CMK"
+            fi
+            echo "Patch applied. Showing head of patched file:"
+            sed -n '1,60p' "$CMK" || true
+          else
+            echo "No CMakeLists.txt found; skipping patch."
+          fi
+        shell: bash
+
+      - name: Source emsdk, run pyodide build from repo root
         shell: bash -l {0}
         run: |
           set -eux
-
-          echo "GITHUB_WORKSPACE=${GITHUB_WORKSPACE:-/github/workspace}"
-          # source emsdk from inside its directory (emsdk recommends this)
+          # Source emsdk from inside its directory (recommended)
           cd ~/emsdk
-          echo "Sourcing emsdk from $(pwd)"
           source ./emsdk_env.sh
 
-          # go back to repo root (where your pyproject.toml should be)
+          # Return to repo root (adjust if package is in a subdir)
           cd "${GITHUB_WORKSPACE:-/github/workspace}"
-          echo "Building from project dir: $(pwd)"
-          ls -la | sed -n '1,200p'
 
-          # Activate pyodide venv
+          # Activate venv
           source ~/pyodide-venv/bin/activate
-          echo "python: $(which python)  pyodide: $(which pyodide || true)"
 
-          # Prevent pybind11 / CMake from trying to validate host Python vs cross-compiler
-          # This avoids the "Python is 64-bit, chosen compiler is 32-bit" error during cross-build.
+          # Help CMake further by disabling PYBIND11_FINDPYTHON again via CMAKE_ARGS
           export CMAKE_ARGS="-DPYBIND11_FINDPYTHON=OFF -DPYBIND11_FINDPYTHON_EXECUTABLE:STRING=$(which python)"
           echo "CMAKE_ARGS=$CMAKE_ARGS"
 
-          # Optional sanity: run native pip install . to ensure packaging works (uncomment if desired)
-          # pip install . || true
+          # Ensure pyodide-build is present
+          python -m pip show pyodide-build || python -m pip install pyodide-build==0.26.1
 
-          # Build the Pyodide wheel (may download xbuildenv; can be slow first time)
+          # Build Pyodide wheel (first run downloads xbuildenv and can take several minutes)
           pyodide build
 
-          # show generated artifacts
+          # List the produced artifacts
           ls -la dist || true
+        env:
+          PATH: ${{ runner.tool_cache }}:/usr/local/bin:$PATH
+
       - name: Prepare Jupyter-Lite site and copy pyodide artifacts
         shell: bash
         run: |
           set -eux
-          # Where to put the assembled site (temp dir)
           SITE_TMP=/tmp/rigid_body_interactive
           rm -rf "${SITE_TMP}"
           git clone https://github.com/triadtitans/rigid_body_interactive.git "${SITE_TMP}"
 
-          # Ensure static pyodide dir exists and copy our pyodide wheel artifacts in
           mkdir -p "${SITE_TMP}/dist/static/pyodide"
-          # copy the pyodide-built files (adjust path if your build emits elsewhere)
           cp -r ./dist/* "${SITE_TMP}/dist/static/pyodide/" || true
 
-          # list what we copied for debugging
           echo "Copied files:"
           ls -la "${SITE_TMP}/dist/static/pyodide" || true
 
@@ -105,10 +136,8 @@ jobs:
         run: |
           set -eux
           source ~/pyodide-venv/bin/activate
-
           SITE_TMP=/tmp/rigid_body_interactive
           cd "${SITE_TMP}"
-          # The --pyodide option can point to a tarball URL (or omit if included)
           jupyter lite build --pyodide https://ngsolve.org/files/pyodide-0.26.0/ngsolve_pyodide.tar.bz2
           ls -la dist || true
 
