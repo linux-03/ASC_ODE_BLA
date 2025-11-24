@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.18)
 project(ASC_ODE_BLA LANGUAGES CXX)
+cmake_policy(VERSION 3.18)
 
 set (CMAKE_CXX_STANDARD 17)
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
