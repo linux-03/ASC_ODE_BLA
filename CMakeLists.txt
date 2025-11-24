@@ -1,5 +1,13 @@
 cmake_minimum_required(VERSION 3.18)
 project(ASC_ODE_BLA LANGUAGES CXX)
+
+# --- Skip host-Python probing when cross-compiling to Emscripten ---
+if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten" OR CMAKE_CROSSCOMPILING)
+  message(STATUS "Cross-compiling detected: disabling PYBIND11_FINDPYTHON to avoid host-Python vs cross-compiler checks.")
+  set(PYBIND11_FINDPYTHON OFF CACHE BOOL "Do not probe host python when cross-compiling")
+endif()
+# --- end guard ---
+
 include(FetchContent)
 
 # Fetch pybind11 for cross-builds or fallback
@@ -16,9 +24,9 @@ endif()
 
 
 # Allow caller to provide Python_EXECUTABLE on the cmake command line
-if(NOT DEFINED Python_EXECUTABLE)
-  find_program(Python_EXECUTABLE NAMES python3 python)
-endif()
+#if(NOT DEFINED Python_EXECUTABLE)
+#  find_program(Python_EXECUTABLE NAMES python3 python)
+#endif()
 
 # Detect cross-compilation for Emscripten
 if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
