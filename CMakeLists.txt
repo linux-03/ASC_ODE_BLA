@@ -1,10 +1,19 @@
 cmake_minimum_required(VERSION 3.18)
 project(ASC_ODE_BLA LANGUAGES CXX)
 
-# --- Skip host-Python probing when cross-compiling to Emscripten ---
+# --- CI/pyodide: skip host-Python probing when cross-compiling to Emscripten ---
 if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten" OR CMAKE_CROSSCOMPILING)
-  message(STATUS "Cross-compiling detected: disabling PYBIND11_FINDPYTHON to avoid host-Python vs cross-compiler checks.")
-  set(PYBIND11_FINDPYTHON OFF CACHE BOOL "Do not probe host python when cross-compiling")
+  message(STATUS "Cross-compiling detected: disabling PYBIND11_FINDPYTHON and clearing Python variables to avoid host-Python vs cross-compiler checks.")
+
+  # Force OFF so pybind11's CMake helpers won't try to find/validate host python
+  set(PYBIND11_FINDPYTHON OFF CACHE BOOL "CI: do not find host python when cross-compiling" FORCE)
+
+  # Also clear any Python executable / include / lib variables pybind11 or FindPython might consult.
+  # Use CACHE + FORCE so we override any previously set values.
+  set(PYBIND11_FINDPYTHON_EXECUTABLE "" CACHE FILEPATH "CI: no host python" FORCE)
+  set(Python_EXECUTABLE "" CACHE FILEPATH "CI: no host python" FORCE)
+  set(Python_INCLUDE_DIRS "" CACHE STRING "CI: empty" FORCE)
+  set(Python_LIBRARIES "" CACHE STRING "CI: empty" FORCE)
 endif()
 # --- end guard ---
 
