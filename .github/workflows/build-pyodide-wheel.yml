@@ -131,5 +131,5 @@ jobs:
       - name: Deploy site to GitHub Pages (gh-pages)
         uses: peaceiris/actions-gh-pages@v4
         with:
-          github_token: ${{ secrets.GH_PAGES }}
+          github_token: ${{ secrets.GH_PAGES_TOKEN }}
           publish_dir: /tmp/rigid_body_interactive/dist
