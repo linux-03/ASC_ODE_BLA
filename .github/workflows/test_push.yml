@@ -1,62 +1,46 @@
-name: Test GH Pages Push
+name: Quick GH-pages push & token test
+on: workflow_dispatch
 
-on:
-  workflow_dispatch: {}
-
-permissions:
+permissions: 
   contents: read
   pages: write
 
 jobs:
-  test-push:
+  test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout (no submodules)
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+      - name: Show which token will be used
+        run: |
+          echo "Using secret GH_PAGES_TOKEN present? ${GH_PAGES_TOKEN:+yes}"
+        env:
+          GH_PAGES_TOKEN: ${{ secrets.GH_PAGES_TOKEN }}
 
-      - name: Prepare tiny test site
+      - name: Verify token via REST API (shows scopes & repo permissions)
+        env:
+          GH_PAGES_TOKEN: ${{ secrets.GH_PAGES_TOKEN }}
+        run: |
+          set -eux
+          # show who the token is (user) and X-OAuth-Scopes header
+          echo "=== GET https://api.github.com/user (identity & scopes) ==="
+          curl -i -H "Authorization: token $GH_PAGES_TOKEN" https://api.github.com/user | sed -n '1,120p'
+          echo
+          echo "=== Repo info (permissions field) ==="
+          curl -s -H "Authorization: token $GH_PAGES_TOKEN" "https://api.github.com/repos/linux-03/ASC_ODE_BLA" | jq .permissions || true
+
+      - name: Attempt a small git push using the token (non-destructive test)
+        env:
+          GH_PAGES_TOKEN: ${{ secrets.GH_PAGES_TOKEN }}
         run: |
           set -eux
           TMPDIR=$(mktemp -d)
-          echo "<!doctype html><meta charset=utf-8><title>gh-pages test</title><body>GH Pages push test at $(date -u)</body>" > "$TMPDIR/index.html"
-          echo "TMPDIR=$TMPDIR" > /tmp/gh_test_env
-          ls -la "$TMPDIR"
-        shell: bash
-
-      - name: Deploy site to GitHub Pages (gh-pages)
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          personal_token: ${{ secrets.GH_PAGES }}    # <- use personal_token when using a PAT
-          publish_dir: /tmp/rigid_body_interactive/dist     # <- exact build output dir
-          publish_branch: gh-pages
-          force_orphan: true
-          keep_files: false
-          enable_jekyll: false
-          exclude_assets: .github
-          allow_empty_commit: false
-
-
-      - name: Move test content to known dir
-        run: |
-          set -eux
-          # read TMPDIR from the previous prepare step output file
-          if [ -f /tmp/gh_test_env ]; then
-            TMPDIR=$(sed -n 's/TMPDIR=//p' /tmp/gh_test_env)
-          else
-            TMPDIR=$(mktemp -d)
-            echo "TMPDIR not found; using $TMPDIR"
-          fi
-          DEST=/tmp/gh-pages-test-site
-          rm -rf "$DEST"
-          mkdir -p "$DEST"
-          cp -r "$TMPDIR"/* "$DEST"/
-          ls -la "$DEST"
-        shell: bash
-
-      - name: Deploy test site with gh-pages action (final)
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GH_PAGES }}
-          publish_dir: /tmp/gh-pages-test-site
+          mkdir -p "$TMPDIR/test-site"
+          echo "ci test $(date -u)" > "$TMPDIR/test-site/index.html"
+          cd "$TMPDIR"
+          git init
+          git config user.name "gh-actions-test"
+          git config user.email "actions@example.com"
+          git add -A
+          git commit -m "test gh-pages push"
+          # push to gh-pages (force) using PAT in HTTPS URL; replace with your repo path
+          git push --force "https://${GH_PAGES_TOKEN}@github.com/linux-03/ASC_ODE_BLA.git" HEAD:gh-pages || true
+          echo "git push exit code: $?"
