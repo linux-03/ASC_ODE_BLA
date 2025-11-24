@@ -112,6 +112,11 @@ jobs:
           # copy the pyodide-built files (adjust path if your build emits elsewhere)
           cp -r ./dist/* "${SITE_TMP}/dist/static/pyodide/" || true
 
+          source ~/pyodide-venv/bin/activate
+          pip download pyodide-kernel -d "${SITE_TMP}/dist/static/pyodide"
+          pip download piplite -d "${SITE_TMP}/dist/static/pyodide"
+          ls -la "${SITE_TMP}/dist/static/pyodide"
+
           # list what we copied for debugging
           echo "Copied files:"
           ls -la "${SITE_TMP}/dist/static/pyodide" || true
@@ -121,11 +126,12 @@ jobs:
         run: |
           set -eux
           source ~/pyodide-venv/bin/activate
-
           SITE_TMP=/tmp/rigid_body_interactive
           cd "${SITE_TMP}"
-          # The --pyodide option can point to a tarball URL (or omit if included)
+
+          # Build JupyterLite site, bundling our local wheels
           jupyter lite build --pyodide https://ngsolve.org/files/pyodide-0.26.0/ngsolve_pyodide.tar.bz2
+
           ls -la dist || true
 
       - name: Deploy site to GitHub Pages (gh-pages)
