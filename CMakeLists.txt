@@ -94,7 +94,7 @@ if(DEFINED SKBUILD)
   find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
   find_package(pybind11 CONFIG REQUIRED)
   python_add_library(rigid_body_FEM MODULE bind.cc WITH_SOABI)
-  target_link_libraries(rigid_body_FEM PRIVATE pybind11::headers)
+  target_link_libraries(rigid_body_FEM PRIVATE pybind11::headers PUBLIC Elements nonlinfunc src)
   target_compile_definitions(rigid_body_FEM PRIVATE VERSION_INFO=${PROJECT_VERSION})
 else()
   # Normal build (native non-SKBUILD or cross-compile): use pybind11_add_module.
