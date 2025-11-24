@@ -48,6 +48,7 @@ jobs:
           pip install pyodide-build==0.26.1
           # jupyter-lite core (to run jupyter lite build) and pyodide kernel helper
           pip install jupyterlite-core jupyterlite-pyodide-kernel
+          pip install jupyter-server jupyterlab_server libarchive-c
         shell: bash
 
       - name: Install Emscripten SDK (emsdk)
