@@ -51,14 +51,32 @@ jobs:
 
       - name: Build project for Pyodide
         shell: bash -l {0}
-        env:
-          PATH: ${{ runner.tool_cache }}:/usr/local/bin:$PATH
         run: |
-          source ~/emsdk/emsdk_env.sh
+          set -eux
+
+          # show PATH for debugging (optional)
+          echo "Initial PATH: $PATH"
+
+          # go into the emsdk directory and debug basic commands
+          cd ~/emsdk
+          echo "PWD: $(pwd)"
+          echo "which dirname: $(which dirname || true)"
+          echo "ls location: $(which ls || true)"
+          ls -la /usr/bin/dirname || true
+
+          # source emsdk from inside its directory (recommended by emsdk)
+          # this will set EMSDK environment variables (EMSDK, EMSDK_NODE, EMCC, etc.)
+          source ./emsdk_env.sh
+
+          # activate your pyodide venv
           source ~/pyodide-venv/bin/activate
-          # build the pyodide wheel
+
+          # build pyodide wheel
           pyodide build
+
+          # list created artifacts
           ls -la dist
+
 
       - name: Verify wheel
         run: |
