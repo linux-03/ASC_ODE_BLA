@@ -15,8 +15,20 @@ jobs:
     timeout-minutes: 180
 
     steps:
-      - name: Checkout repository
+      - name: Checkout repository (with submodules)
         uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
+          fetch-depth: 0
+
+      - name: Verify submodule files present
+        run: |
+          echo "ls bla/src:"
+          ls -la bla/src || true
+          echo "check for vector.h and matrix.h"
+          test -f bla/src/vector.h && echo "vector.h present" || echo "vector.h MISSING"
+          test -f bla/src/matrix.h && echo "matrix.h present" || echo "matrix.h MISSING"
+        shell: bash
 
       - name: Install system packages
         run: |
