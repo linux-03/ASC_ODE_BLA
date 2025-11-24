@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.18)
 project(ASC_ODE_BLA LANGUAGES CXX)
+
+# Ensure modern CMake policy is applied so subprojects (pybind11) don't fail due to policy checks.
 cmake_policy(VERSION 3.18)
 
 set (CMAKE_CXX_STANDARD 17)
@@ -89,12 +91,10 @@ target_link_libraries(main PRIVATE helper Elements nonlinfunc src)
 # pybind11 module
 # Use SKBUILD helper if available (scikit-build-core), otherwise normal pybind11_add_module
 if(DEFINED SKBUILD)
-  # Use scikit-build-core's python_add_library helper to generate wheel-friendly module
   python_add_library(rigid_body_FEM MODULE bind.cc WITH_SOABI)
   target_link_libraries(rigid_body_FEM PRIVATE pybind11::headers)
   target_compile_definitions(rigid_body_FEM PRIVATE VERSION_INFO=${PROJECT_VERSION})
 else()
-  # Normal native/cross builds: use pybind11_add_module (pybind11 must be available via the logic above)
   pybind11_add_module(rigid_body_FEM bind.cc)
   target_link_libraries(rigid_body_FEM PUBLIC Elements nonlinfunc src)
 endif()
