@@ -121,6 +121,20 @@ jobs:
           echo "Copied files:"
           ls -la "${SITE_TMP}/dist/static/pyodide" || true
 
+      - name: Ensure JupyterLite kernel and piplite are available to the build
+        shell: bash
+        run: |
+          set -eux
+          source ~/pyodide-venv/bin/activate
+
+          # install the jupyterlite pyodide-kernel integration and helpers into the build venv
+          pip install --upgrade pip
+          pip install jupyterlite-pyodide-kernel piplite jupyter-server jupyterlab_server libarchive-c
+
+          # show what was installed and where (quick sanity)
+          python -c "import jupyterlite_pyodide_kernel as k; import importlib, pkgutil, os; print('module:', k); print('package location:', os.path.dirname(k.__file__))"
+          pip show jupyterlite-pyodide-kernel piplite
+
       - name: Build Jupyter-Lite site (bundles pyodide)
         shell: bash -l {0}
         run: |
