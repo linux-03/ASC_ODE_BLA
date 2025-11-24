@@ -71,8 +71,9 @@ jobs:
 
           # Prevent pybind11 / CMake from trying to validate host Python vs cross-compiler
           # This avoids the "Python is 64-bit, chosen compiler is 32-bit" error during cross-build.
-          export CMAKE_ARGS="-DPYBIND11_FINDPYTHON=OFF -DPYBIND11_FINDPYTHON_EXECUTABLE:STRING=$(which python)"
+          export CMAKE_ARGS="-DPYBIND11_FINDPYTHON=OFF -DPYBIND11_FINDPYTHON_EXECUTABLE:STRING=$(which python) -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_POLICY_VERSION=3.18"
           echo "CMAKE_ARGS=$CMAKE_ARGS"
+
 
           # Optional sanity: run native pip install . to ensure packaging works (uncomment if desired)
           # pip install . || true
@@ -82,6 +83,8 @@ jobs:
 
           # show generated artifacts
           ls -la dist || true
+
+      
       - name: Prepare Jupyter-Lite site and copy pyodide artifacts
         shell: bash
         run: |
