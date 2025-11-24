@@ -87,17 +87,12 @@ jobs:
           export CMAKE_ARGS="-DPYBIND11_FINDPYTHON=OFF -DPYBIND11_FINDPYTHON_EXECUTABLE:STRING=$(which python) -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_POLICY_VERSION=3.18"
           echo "CMAKE_ARGS=$CMAKE_ARGS"
 
-
-          # Optional sanity: run native pip install . to ensure packaging works (uncomment if desired)
-          # pip install . || true
-
           # Build the Pyodide wheel (may download xbuildenv; can be slow first time)
           pyodide build
 
           # show generated artifacts
           ls -la dist || true
 
-      
       - name: Prepare Jupyter-Lite site and copy pyodide artifacts
         shell: bash
         run: |
@@ -123,12 +118,14 @@ jobs:
           source ~/pyodide-venv/bin/activate
 
           # install the integration that jupyter lite knows how to bundle
-          pip install --upgrade pip
-          pip install jupyterlite-pyodide-kernel piplite jupyter-server jupyterlab_server libarchive-c
+          pip install --upgrade pip setuptools wheel
+          pip install jupyterlite-pyodide-kernel jupyter-server jupyterlab_server libarchive-c || true
+
+          # install piplite from GitHub (robust fallback if PyPI doesn't provide a wheel on CI)
+          pip install git+https://github.com/pyodide/piplite.git
 
           # quick sanity: list these packages and versions
           pip show jupyterlite-pyodide-kernel piplite jupyter-server jupyterlab_server || true
-
 
       - name: Build Jupyter-Lite site (bundles pyodide)
         shell: bash -l {0}
@@ -145,5 +142,10 @@ jobs:
       - name: Deploy site to GitHub Pages (gh-pages)
         uses: peaceiris/actions-gh-pages@v4
         with:
-          github_token: ${{ secrets.GH_PAGES_TOKEN }}
+          personal_token: ${{ secrets.GH_PAGES_TOKEN }}
           publish_dir: /tmp/rigid_body_interactive/dist
+          publish_branch: gh-pages
+          force_orphan: true
+          keep_files: false
+          enable_jekyll: false
+          exclude_assets: .github
