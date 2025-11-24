@@ -112,40 +112,34 @@ jobs:
           # copy the pyodide-built files (adjust path if your build emits elsewhere)
           cp -r ./dist/* "${SITE_TMP}/dist/static/pyodide/" || true
 
-          source ~/pyodide-venv/bin/activate
-          pip download pyodide-kernel -d "${SITE_TMP}/dist/static/pyodide"
-          pip download piplite -d "${SITE_TMP}/dist/static/pyodide"
-          ls -la "${SITE_TMP}/dist/static/pyodide"
-
           # list what we copied for debugging
           echo "Copied files:"
           ls -la "${SITE_TMP}/dist/static/pyodide" || true
 
-      - name: Ensure JupyterLite kernel and piplite are available to the build
+      - name: Install jupyterlite pyodide kernel integration & helpers
         shell: bash
         run: |
           set -eux
           source ~/pyodide-venv/bin/activate
 
-          # install the jupyterlite pyodide-kernel integration and helpers into the build venv
+          # install the integration that jupyter lite knows how to bundle
           pip install --upgrade pip
           pip install jupyterlite-pyodide-kernel piplite jupyter-server jupyterlab_server libarchive-c
 
-          # show what was installed and where (quick sanity)
-          python -c "import jupyterlite_pyodide_kernel as k; import importlib, pkgutil, os; print('module:', k); print('package location:', os.path.dirname(k.__file__))"
-          pip show jupyterlite-pyodide-kernel piplite
+          # quick sanity: list these packages and versions
+          pip show jupyterlite-pyodide-kernel piplite jupyter-server jupyterlab_server || true
+
 
       - name: Build Jupyter-Lite site (bundles pyodide)
         shell: bash -l {0}
         run: |
           set -eux
           source ~/pyodide-venv/bin/activate
+
           SITE_TMP=/tmp/rigid_body_interactive
           cd "${SITE_TMP}"
-
-          # Build JupyterLite site, bundling our local wheels
+          # The --pyodide option can point to a tarball URL (or omit if included)
           jupyter lite build --pyodide https://ngsolve.org/files/pyodide-0.26.0/ngsolve_pyodide.tar.bz2
-
           ls -la dist || true
 
       - name: Deploy site to GitHub Pages (gh-pages)
