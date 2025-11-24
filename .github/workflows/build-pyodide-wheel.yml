@@ -30,8 +30,10 @@ jobs:
           pip install jupyterlite-core
           
           pip install jupyterlite-pyodide-kernel
+      
 
       - name: Install emsdk
+        shell: bash -l {0}
         run: |
           git clone https://github.com/emscripten-core/emsdk.git ~/emsdk
           cd ~/emsdk
@@ -39,7 +41,16 @@ jobs:
           ./emsdk activate 3.1.58
         # note: emsdk env needs to be sourced in later steps before using emcc
 
+      - name: Debug PATH and dirname
+        run: |
+          echo "SHELL: $SHELL"
+          echo "PATH: $PATH"
+          which dirname || (echo "dirname not found"; ls -l /usr/bin/dirname || true)
+          type dirname || true
+        shell: bash
+
       - name: Build project for Pyodide
+        shell: bash -l {0}
         env:
           PATH: ${{ runner.tool_cache }}:/usr/local/bin:$PATH
         run: |
