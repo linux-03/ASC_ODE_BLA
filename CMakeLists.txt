@@ -19,10 +19,17 @@ endif()
 
 include(FetchContent)
 
-# Fetch pybind11 for cross-builds or fallback
+# --- Ensure pybind11 is available as a subproject (avoid loading pybind11Config during cross-build) ---
+include(FetchContent)
+
+# Try to find an installed pybind11 first, but DO NOT load its pybind11Config if we're cross-compiling.
+# Instead, fall back to fetching the source and adding it as a subdirectory so pybind11's internals
+# respect the cache variables we set above (PYBIND11_FINDPYTHON OFF, etc).
 find_package(pybind11 CONFIG QUIET)
-if(NOT pybind11_FOUND)
-  message(STATUS "pybind11 not found via find_package — fetching with FetchContent")
+if(pybind11_FOUND AND NOT (CMAKE_SYSTEM_NAME STREQUAL "Emscripten" OR CMAKE_CROSSCOMPILING))
+  message(STATUS "Using installed pybind11 (config package)")
+else()
+  message(STATUS "Using FetchContent to provide pybind11 (ensures subproject build and no config probing)")
   FetchContent_Declare(
     pybind11
     GIT_REPOSITORY https://github.com/pybind/pybind11.git
@@ -30,7 +37,6 @@ if(NOT pybind11_FOUND)
   )
   FetchContent_MakeAvailable(pybind11)
 endif()
-
 
 # Allow caller to provide Python_EXECUTABLE on the cmake command line
 #if(NOT DEFINED Python_EXECUTABLE)
