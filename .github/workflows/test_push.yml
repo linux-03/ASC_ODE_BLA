@@ -29,7 +29,7 @@ jobs:
         # use your PAT stored as GH_PAGES_TOKEN in repo secrets
         uses: peaceiris/actions-gh-pages@v4
         with:
-          github_token: ${{ secrets.GH_PAGES_TOKEN }}
+          github_token: ${{ secrets.GH_PAGES }}
           publish_dir: ${{ steps.prepare.outputs.tmpdir || '/tmp' }} # fallback if not read; action below uses TMPDIR file
         env:
           # pass TMPDIR via an env var so we can use it if needed
