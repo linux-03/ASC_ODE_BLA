@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.18)
 project(ASC_ODE_BLA LANGUAGES CXX)
 
+set (CMAKE_CXX_STANDARD 17)
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+
 # --- CI/pyodide: skip host-Python probing when cross-compiling to Emscripten ---
 if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten" OR CMAKE_CROSSCOMPILING)
   message(STATUS "Cross-compiling detected: disabling PYBIND11_FINDPYTHON and clearing Python variables to avoid host-Python vs cross-compiler checks.")
@@ -17,67 +20,50 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten" OR CMAKE_CROSSCOMPILING)
 endif()
 # --- end guard ---
 
+# Ensure FetchContent is available for providing pybind11 as a subproject when needed
 include(FetchContent)
 
-# --- Ensure pybind11 is available as a subproject (avoid loading pybind11Config during cross-build) ---
-include(FetchContent)
-
-# Try to find an installed pybind11 first, but DO NOT load its pybind11Config if we're cross-compiling.
-# Instead, fall back to fetching the source and adding it as a subdirectory so pybind11's internals
-# respect the cache variables we set above (PYBIND11_FINDPYTHON OFF, etc).
-find_package(pybind11 CONFIG QUIET)
-if(pybind11_FOUND AND NOT (CMAKE_SYSTEM_NAME STREQUAL "Emscripten" OR CMAKE_CROSSCOMPILING))
-  message(STATUS "Using installed pybind11 (config package)")
-else()
-  message(STATUS "Using FetchContent to provide pybind11 (ensures subproject build and no config probing)")
+# --- pybind11 / Python module setup (works for native SKBUILD and for Pyodide cross-build) ---
+# For cross-compiles (Emscripten / pyodide), avoid loading an installed pybind11 config package
+# (which can trigger Python probing). Instead provide pybind11 as a subproject (FetchContent)
+# so the pybind11 CMake internals respect our cache variables that disable Python probing.
+if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten" OR CMAKE_CROSSCOMPILING)
+  message(STATUS "Cross-compiling for Emscripten: providing pybind11 via FetchContent (no config probing).")
   FetchContent_Declare(
     pybind11
     GIT_REPOSITORY https://github.com/pybind/pybind11.git
     GIT_TAG        v2.10.4
   )
   FetchContent_MakeAvailable(pybind11)
-endif()
-
-# Allow caller to provide Python_EXECUTABLE on the cmake command line
-#if(NOT DEFINED Python_EXECUTABLE)
-#  find_program(Python_EXECUTABLE NAMES python3 python)
-#endif()
-
-# Detect cross-compilation for Emscripten
-if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
-  set(BUILDING_FOR_EMSCRIPTEN TRUE)
 else()
-  set(BUILDING_FOR_EMSCRIPTEN FALSE)
-endif()
-
-if(NOT BUILDING_FOR_EMSCRIPTEN)
-  message(STATUS "Native build: locating Python interpreter + development files")
-  # Native build: require interpreter + development (headers / embedding)
-  find_package(Python COMPONENTS Interpreter Development REQUIRED)
-else()
-  message(STATUS "Cross build (Emscripten): using Python executable: ${Python_EXECUTABLE}")
-  if(NOT Python_EXECUTABLE)
-    message(FATAL_ERROR "Please provide -DPython_EXECUTABLE=/path/to/python when cross-compiling")
-  endif()
-  # Avoid attempting to link host Python libraries into wasm target:
-  set(Python_EXECUTABLE ${Python_EXECUTABLE} CACHE FILEPATH "Host python executable")
-  set(Python_INCLUDE_DIRS "" CACHE STRING "Empty when targeting Emscripten")
-  set(Python_LIBRARIES "" CACHE STRING "Empty when targeting Emscripten")
-endif()
-
-set (CMAKE_CXX_STANDARD 17)
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
-
-# Prefer vendored pybind11 if available; otherwise try find_package.
-if(EXISTS "${CMAKE_SOURCE_DIR}/third_party/pybind11/CMakeLists.txt")
-  add_subdirectory(${CMAKE_SOURCE_DIR}/third_party/pybind11)
-else()
-  find_package(pybind11 CONFIG QUIET)
-  if(NOT pybind11_FOUND)
-    message(STATUS "pybind11 not found with find_package; consider adding pybind11 as a submodule (third_party/pybind11) or installing the pybind11 python package in the build venv.")
+  # Native path: if SKBUILD is used (scikit-build-core) prefer the SKBUILD flow.
+  if(DEFINED SKBUILD)
+    message(STATUS "Native SKBUILD build: using Python and pybind11 config package")
+    find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
+    find_package(pybind11 CONFIG REQUIRED)
+  else()
+    # Native, non-SKBUILD: prefer vendored pybind11 if present, else installed config, else FetchContent.
+    if(EXISTS "${CMAKE_SOURCE_DIR}/third_party/pybind11/CMakeLists.txt")
+      message(STATUS "Using vendored pybind11 via add_subdirectory")
+      add_subdirectory(${CMAKE_SOURCE_DIR}/third_party/pybind11)
+    else()
+      find_package(pybind11 CONFIG QUIET)
+      if(pybind11_FOUND)
+        message(STATUS "Found installed pybind11 (config package) - using it for native build")
+      else()
+        message(STATUS "pybind11 not found installed - fetching via FetchContent")
+        FetchContent_Declare(
+          pybind11
+          GIT_REPOSITORY https://github.com/pybind/pybind11.git
+          GIT_TAG        v2.10.4
+        )
+        FetchContent_MakeAvailable(pybind11)
+      endif()
+    endif()
   endif()
 endif()
 
+# If DEBUG build type, add debug definition
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   add_definitions(-DDEBUG_MODE)
 endif()
@@ -100,7 +86,16 @@ add_executable(main main.cc)
 target_link_libraries(main PRIVATE helper Elements nonlinfunc src)
 
 # pybind11 module
-pybind11_add_module(rigid_body_FEM bind.cc)
-target_link_libraries(rigid_body_FEM PUBLIC Elements nonlinfunc src)
+# Use SKBUILD helper if available (scikit-build-core), otherwise normal pybind11_add_module
+if(DEFINED SKBUILD)
+  # Use scikit-build-core's python_add_library helper to generate wheel-friendly module
+  python_add_library(rigid_body_FEM MODULE bind.cc WITH_SOABI)
+  target_link_libraries(rigid_body_FEM PRIVATE pybind11::headers)
+  target_compile_definitions(rigid_body_FEM PRIVATE VERSION_INFO=${PROJECT_VERSION})
+else()
+  # Normal native/cross builds: use pybind11_add_module (pybind11 must be available via the logic above)
+  pybind11_add_module(rigid_body_FEM bind.cc)
+  target_link_libraries(rigid_body_FEM PUBLIC Elements nonlinfunc src)
+endif()
 
 # (Optional) any extra packaging / install logic follows...
