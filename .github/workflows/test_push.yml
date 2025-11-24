@@ -1,0 +1,60 @@
+name: Test GH Pages Push
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  pages: write
+
+jobs:
+  test-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (no submodules)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare tiny test site
+        run: |
+          set -eux
+          TMPDIR=$(mktemp -d)
+          echo "<!doctype html><meta charset=utf-8><title>gh-pages test</title><body>GH Pages push test at $(date -u)</body>" > "$TMPDIR/index.html"
+          echo "TMPDIR=$TMPDIR" > /tmp/gh_test_env
+          ls -la "$TMPDIR"
+        shell: bash
+
+      - name: Deploy test site to gh-pages
+        # use your PAT stored as GH_PAGES_TOKEN in repo secrets
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GH_PAGES_TOKEN }}
+          publish_dir: ${{ steps.prepare.outputs.tmpdir || '/tmp' }} # fallback if not read; action below uses TMPDIR file
+        env:
+          # pass TMPDIR via an env var so we can use it if needed
+          TMPDIR: /tmp
+        # We can't directly inject the TMPDIR from previous step's shell variable into the action inputs easily,
+        # so instead create a small copy step to move the test content to a known path the action will use.
+      - name: Move test content to known dir
+        run: |
+          set -eux
+          # read TMPDIR from the previous prepare step output file
+          if [ -f /tmp/gh_test_env ]; then
+            TMPDIR=$(sed -n 's/TMPDIR=//p' /tmp/gh_test_env)
+          else
+            TMPDIR=$(mktemp -d)
+            echo "TMPDIR not found; using $TMPDIR"
+          fi
+          DEST=/tmp/gh-pages-test-site
+          rm -rf "$DEST"
+          mkdir -p "$DEST"
+          cp -r "$TMPDIR"/* "$DEST"/
+          ls -la "$DEST"
+        shell: bash
+
+      - name: Deploy test site with gh-pages action (final)
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GH_PAGES }}
+          publish_dir: /tmp/gh-pages-test-site
