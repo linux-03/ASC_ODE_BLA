@@ -27,9 +27,6 @@ endif()
 include(FetchContent)
 
 # --- pybind11 / Python module setup (works for native SKBUILD and for Pyodide cross-build) ---
-# For cross-compiles (Emscripten / pyodide), avoid loading an installed pybind11 config package
-# (which can trigger Python probing). Instead provide pybind11 as a subproject (FetchContent)
-# so the pybind11 CMake internals respect our cache variables that disable Python probing.
 if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten" OR CMAKE_CROSSCOMPILING)
   message(STATUS "Cross-compiling for Emscripten: providing pybind11 via FetchContent (no config probing).")
   FetchContent_Declare(
@@ -38,6 +35,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten" OR CMAKE_CROSSCOMPILING)
     GIT_TAG        v2.10.4
   )
   FetchContent_MakeAvailable(pybind11)
+
 else()
   # Native path: if SKBUILD is used (scikit-build-core) prefer the SKBUILD flow.
   if(DEFINED SKBUILD)
@@ -88,13 +86,19 @@ add_executable(main main.cc)
 # Link libraries to the main executable
 target_link_libraries(main PRIVATE helper Elements nonlinfunc src)
 
-# pybind11 module
-# Use SKBUILD helper if available (scikit-build-core), otherwise normal pybind11_add_module
+# pybind11 module — STRICTLY guarded so python_add_library is only used when SKBUILD defines it.
 if(DEFINED SKBUILD)
+  # scikit-build's helper (python_add_library) is available only when building via SKBUILD.
+  # This branch will be used when scikit-build/core drives the build (e.g., pip wheel creation).
+  message(STATUS "Using scikit-build helper python_add_library for wheel build")
+  find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
+  find_package(pybind11 CONFIG REQUIRED)
   python_add_library(rigid_body_FEM MODULE bind.cc WITH_SOABI)
   target_link_libraries(rigid_body_FEM PRIVATE pybind11::headers)
   target_compile_definitions(rigid_body_FEM PRIVATE VERSION_INFO=${PROJECT_VERSION})
 else()
+  # Normal build (native non-SKBUILD or cross-compile): use pybind11_add_module.
+  message(STATUS "Using pybind11_add_module for build (non-SKBUILD or cross-compile)")
   pybind11_add_module(rigid_body_FEM bind.cc)
   target_link_libraries(rigid_body_FEM PUBLIC Elements nonlinfunc src)
 endif()
