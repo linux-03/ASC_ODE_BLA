@@ -54,28 +54,32 @@ jobs:
         run: |
           set -eux
 
-          # show PATH for debugging (optional)
           echo "Initial PATH: $PATH"
+          echo "GITHUB_WORKSPACE: ${GITHUB_WORKSPACE:-$(pwd)}"
 
-          # go into the emsdk directory and debug basic commands
+          # go into emsdk directory and source emsdk_env.sh (recommended)
           cd ~/emsdk
-          echo "PWD: $(pwd)"
-          echo "which dirname: $(which dirname || true)"
-          echo "ls location: $(which ls || true)"
-          ls -la /usr/bin/dirname || true
-
-          # source emsdk from inside its directory (recommended by emsdk)
-          # this will set EMSDK environment variables (EMSDK, EMSDK_NODE, EMCC, etc.)
+          echo "Sourcing emsdk from: $(pwd)"
           source ./emsdk_env.sh
 
-          # activate your pyodide venv
-          source ~/pyodide-venv/bin/activate
+          # go back to the repo root where pyproject.toml lives
+          cd "${GITHUB_WORKSPACE:-/github/workspace}"
+          echo "Now in project dir: $(pwd)"
+          echo "Listing project files:"
+          ls -la | sed -n '1,200p'
 
-          # build pyodide wheel
+          # activate the pyodide venv we created earlier
+          source ~/pyodide-venv/bin/activate
+          echo "Python from venv: $(which python) ; pyodide CLI: $(which pyodide || true)"
+
+          # optional sanity: ensure pyodide-build is installed in the venv
+          python -m pip show pyodide-build || python -m pip install pyodide-build==0.26.1
+
+          # build the pyodide wheel (this will download xbuildenv if needed)
           pyodide build
 
-          # list created artifacts
-          ls -la dist
+          # show the produced artifacts
+          ls -la dist || true
 
 
       - name: Verify wheel
