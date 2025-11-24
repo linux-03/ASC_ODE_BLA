@@ -122,7 +122,7 @@ jobs:
           pip install jupyterlite-pyodide-kernel jupyter-server jupyterlab_server libarchive-c || true
 
           # install piplite from GitHub (robust fallback if PyPI doesn't provide a wheel on CI)
-          pip install git+https://github.com/pyodide/piplite.git
+          pip install https://github.com/pyodide/piplite/archive/refs/heads/main.zip
 
           # quick sanity: list these packages and versions
           pip show jupyterlite-pyodide-kernel piplite jupyter-server jupyterlab_server || true
