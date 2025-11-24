@@ -28,14 +28,15 @@ jobs:
       - name: Deploy site to GitHub Pages (gh-pages)
         uses: peaceiris/actions-gh-pages@v4
         with:
-          github_token: ${{ secrets.GH_PAGES_TOKEN }}      # or ${ { secrets.GITHUB_TOKEN } } if you prefer
-          publish_dir: /tmp/rigid_body_interactive/dist    # <- IMPORTANT: point to the single built site folder (not /tmp)
+          personal_token: ${{ secrets.GH_PAGES }}    # <- use personal_token when using a PAT
+          publish_dir: /tmp/rigid_body_interactive/dist     # <- exact build output dir
           publish_branch: gh-pages
-          clean: true            # remove old files on the branch before publishing
-          force_orphan: true     # create a clean orphan branch on first publish (avoids weird merges)
+          force_orphan: true
           keep_files: false
           enable_jekyll: false
           exclude_assets: .github
+          allow_empty_commit: false
+
 
       - name: Move test content to known dir
         run: |
