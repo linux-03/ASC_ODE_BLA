@@ -134,7 +134,7 @@ jobs:
         run: |
           set -euo pipefail
           source "${VENV_DIR}/bin/activate"
-          #cd "${PROJECT_DIR}"
+          cd "${PROJECT_DIR}"
           # Respect TZ=UTC like Dockerfile
           TZ=UTC jupyter lite build --pyodide "${PYODIDE_TARBALL}" --config jupyter_lite_config.json
 
