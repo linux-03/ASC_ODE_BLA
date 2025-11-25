@@ -106,30 +106,12 @@ jobs:
       - name: Prepare Pyodide wheel for JupyterLite (local pypi)
         run: |
           set -euo pipefail
-
-          echo "PROJECT_DIR=${PROJECT_DIR}"
-          echo "VENV_DIR=${VENV_DIR}"
-
-          # Create local pypi folder that jupyter-lite will pack into the site
           mkdir -p files/pypi
-
-          # Copy any wheels that the pyodide build produced into files/pypi
-          # (this could copy both pyodide wasm wheels and any pure-python wheels)
           cp -v "${PROJECT_DIR}/dist/"*.whl files/pypi/ || true
-
-          echo "Wheels copied:"
-          ls -la files/pypi || true
-
-          # Install jupyter-piplite (CLI) into the runner venv (this is fine)
           source "${VENV_DIR}/bin/activate"
-          pip install --upgrade jupyter-piplite
-
-          # Create the piplite index (files/pypi/all.json etc.)
-          jupyter piplite index files/pypi
-
-          echo "piplite index created:"
+          pip install --upgrade jupyterlite-core
+          jupyter lite pip index files/pypi
           ls -la files/pypi
-          sed -n '1,200p' files/pypi/all.json || true
         env:
           PROJECT_DIR: ${{ env.PROJECT_DIR }}
           VENV_DIR: ${{ env.VENV_DIR }}
