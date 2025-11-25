@@ -78,6 +78,8 @@ jobs:
           source "${VENV_DIR}/bin/activate"
           cd "${PROJECT_DIR}"
           # run pyodide build just like in your Dockerfile
+          export CMAKE_ARGS="-DPYBIND11_FINDPYTHON=OFF -DPYBIND11_FINDPYTHON_EXECUTABLE:STRING=$(which python) -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_POLICY_VERSION=3.18"
+          echo "CMAKE_ARGS=$CMAKE_ARGS"
           pyodide build
         env:
           EMSDK_DIR: ${{ env.EMSDK_DIR }}
