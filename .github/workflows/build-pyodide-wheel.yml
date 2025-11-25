@@ -103,6 +103,54 @@ jobs:
           VENV_DIR: ${{ env.VENV_DIR }}
           PROJECT_DIR: ${{ env.PROJECT_DIR }}
 
+      - name: Prepare wheels for JupyterLite (include into site)
+        run: |
+          set -euo pipefail
+
+          echo "PROJECT_DIR=${PROJECT_DIR}"
+          mkdir -p files/pypi
+
+          # copy any built wheels into files/pypi (don't try to pip install pyodide wheels)
+          echo "Copying built wheels..."
+          cp -v ${PROJECT_DIR}/dist/*.whl files/pypi/ || true
+
+          # show what kinds of wheels we have (list filenames)
+          echo "--- files/pypi ---"
+          ls -la files/pypi || true
+
+          # optional: inspect wheel tags (helpful to see if wheel is pyodide vs cp*)
+          python3 - <<'PY'
+          import zipfile, sys, json, os
+          p = "files/pypi"
+          for fn in sorted(os.listdir(p)) if os.path.isdir(p) else []:
+              if fn.endswith(".whl"):
+                  with zipfile.ZipFile(os.path.join(p,fn)) as z:
+                      try:
+                          wheel_info = z.read("WHEEL").decode()
+                      except KeyError:
+                          wheel_info = "<no WHEEL file>"
+                  print(fn)
+                  print("  WHEEL:")
+                  print("\n".join("   "+line for line in wheel_info.splitlines()))
+          PY
+
+              # install jupyter-piplite (this is OK in runner; we do not pip install the pyodide wheel)
+              source "${VENV_DIR}/bin/activate"
+              pip install --upgrade jupyter-piplite
+
+              # create piplite index so the wheel(s) are discoverable by micropip/piplite in the browser
+              jupyter piplite index files/pypi
+
+              # show index summary
+              echo "== index files/pypi =="
+              ls -la files/pypi
+              echo "== all.json (index) =="
+              sed -n '1,200p' files/pypi/all.json || true
+        env:
+          PROJECT_DIR: ${{ env.PROJECT_DIR }}
+          VENV_DIR: ${{ env.VENV_DIR }}
+
+
       - name: Install jupyter-lite requirements (from repo requirements.txt)
         run: |
           set -euo pipefail
@@ -124,6 +172,8 @@ jobs:
           cd "${PROJECT_DIR}"
           # Respect TZ=UTC like Dockerfile
           TZ=UTC jupyter lite build --pyodide "${PYODIDE_TARBALL}" --config jupyter_lite_config.json
+
+          cp /root/ASC_ODE_BLA/dist/* /root/ASC_ODE_BLA/dist/static/pyodide
         env:
           VENV_DIR: ${{ env.VENV_DIR }}
           PROJECT_DIR: ${{ env.PROJECT_DIR }}
