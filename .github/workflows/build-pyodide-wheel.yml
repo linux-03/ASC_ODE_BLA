@@ -138,7 +138,7 @@ jobs:
           # Respect TZ=UTC like Dockerfile
           TZ=UTC jupyter lite build --pyodide "${PYODIDE_TARBALL}" --config jupyter_lite_config.json
 
-          cp /root/ASC_ODE_BLA/dist/* /root/ASC_ODE_BLA/dist/static/pyodide
+          #cp /root/ASC_ODE_BLA/dist/* /root/ASC_ODE_BLA/dist/static/pyodide
         env:
           VENV_DIR: ${{ env.VENV_DIR }}
           PROJECT_DIR: ${{ env.PROJECT_DIR }}
