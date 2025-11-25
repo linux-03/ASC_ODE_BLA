@@ -123,7 +123,7 @@ jobs:
           source "${VENV_DIR}/bin/activate"
           cd "${PROJECT_DIR}"
           # Respect TZ=UTC like Dockerfile
-          TZ=UTC jupyter lite build --pyodide "${PYODIDE_TARBALL}"
+          TZ=UTC jupyter lite build --pyodide "${PYODIDE_TARBALL}" --config jupyter_lite_config.json
         env:
           VENV_DIR: ${{ env.VENV_DIR }}
           PROJECT_DIR: ${{ env.PROJECT_DIR }}

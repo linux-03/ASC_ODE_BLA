@@ -1,0 +1,6 @@
+{
+  "LiteBuildConfig": {
+    "output_dir": "dist",
+    "base_url": "/ASC_ODE_BLA/"
+  }
+}
